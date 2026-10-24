@@ -9,6 +9,13 @@ the two drift apart.
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-10-24
+
+### Added
+
+- **Blank space** for the degree sign setting: `12 C` instead of `12°C`, for
+  boards that print a heart at tile 62.
+
 ## [1.3.0] — 2026-10-24
 
 ### Changed

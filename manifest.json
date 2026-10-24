@@ -1,7 +1,7 @@
 {
   "id": "wetter",
   "name": "Wetter",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Current weather and a colored week overview for any coordinates — condition, temperature, today's low and high, and one green, yellow or red tile per day. Built for the Note, adapts to the Flagship. Forecasts from Open-Meteo, no API key needed.",
   "author": "Oliver Rummeyer",
   "repository": "https://github.com/rummeyer/fiestaboard-plugin--wetter",
@@ -158,16 +158,18 @@
       "degree_sign": {
         "type": "string",
         "title": "Degree sign",
-        "description": "Board character 62 is a degree sign on a Flagship. Some Notes carry a heart or a blank flap at that position instead; choose Auto to leave the sign off on note-shaped boards.",
+        "description": "Board character 62 is a degree sign on a Flagship. Some Notes carry a heart or a blank flap at that position instead; choose Blank space for 12 C, or Auto to leave the sign off on note-shaped boards.",
         "enum": [
           "on",
           "auto",
+          "blank",
           "off"
         ],
         "enumNames": [
-          "Always",
+          "Always (12°C)",
           "Auto (skip on Note)",
-          "Never"
+          "Blank space (12 C)",
+          "Never (12C)"
         ],
         "default": "on"
       },
@@ -247,7 +249,7 @@
         "example": "10"
       },
       "temp_unit": {
-        "description": "Unit suffix for temperatures, °C or °F (C or F when the degree sign is off)",
+        "description": "Unit suffix for temperatures: °C, C, or \" C\" with Blank space (°F/F for imperial)",
         "type": "string",
         "max_length": 2,
         "group": "now",

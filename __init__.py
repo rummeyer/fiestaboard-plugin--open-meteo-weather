@@ -88,7 +88,7 @@ LANGUAGES = ("de", "en")
 DEFAULT_LANGUAGE = "de"
 UNITS = ("metric", "imperial")
 DEFAULT_UNITS = "metric"
-DEGREE_CHOICES = ("on", "auto", "off")
+DEGREE_CHOICES = ("on", "auto", "blank", "off")
 DEFAULT_DEGREE = "on"
 
 # What a day is rated as, and the color each rating gets unless the user picks
@@ -433,9 +433,15 @@ def to_board_text(text: str, umlauts: str = "expand") -> str:
 
 
 def degree_sign(degree: str, device_type: str | None) -> str:
-    """The degree sign, unless the board would print something else for it."""
+    """The degree sign, unless the board would print something else for it.
+
+    "blank" puts a space where the sign would go ("12 C"), for a board whose
+    tile 62 is a heart.
+    """
     if degree == "off":
         return ""
+    if degree == "blank":
+        return " "
     if degree == "on":
         return DEGREE
     return "" if (device_type or "").startswith(NOTE_DEVICE_TYPES) else DEGREE

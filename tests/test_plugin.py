@@ -248,6 +248,7 @@ class TestText:
         assert degree_sign("auto", "note_array") == ""
         assert degree_sign("on", "note") == "°"
         assert degree_sign("off", "flagship") == ""
+        assert degree_sign("blank", "note") == " "
 
     def test_every_condition_label_leaves_room_for_a_temperature_on_a_note(self):
         """15 tiles = label + space + "-12"/"104"; a longer label would be cut."""
@@ -449,6 +450,12 @@ class TestPlugin:
     def test_the_degree_sign_can_be_left_off(self, make_plugin):
         assert make_plugin(degree_sign="auto").get_data(NOTE).formatted_lines[0] == "WOLKIG 12C 71% "
         assert make_plugin(degree_sign="auto").get_data(FLAGSHIP).data["temp_unit"] == "°C"
+
+    def test_a_blank_space_can_stand_in_for_the_degree_sign(self, make_plugin):
+        result = make_plugin(degree_sign="blank").get_data(NOTE)
+        assert result.formatted_lines[0] == "WOLKIG 12 C 71%"
+        assert result.formatted_lines[1] == f"{BLUE} 7 C  {RED} 14 C  "
+        assert result.data["temp_unit"] == " C"
 
     def test_too_few_days_back_makes_the_plugin_unavailable(self, make_plugin, monkeypatch):
         monkeypatch.setattr(wetter, "fetch_forecast_body", lambda params: {"daily": {"time": ["2026-10-24"]}})
