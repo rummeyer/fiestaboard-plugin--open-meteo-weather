@@ -1,0 +1,493 @@
+{
+  "id": "wetter",
+  "name": "Wetter",
+  "version": "1.0.0",
+  "description": "Current weather and a colored week overview for any coordinates — condition, temperature, today's low and high, and one green, yellow or red tile per day. Built for the Note, adapts to the Flagship. Forecasts from Open-Meteo, no API key needed.",
+  "author": "Oliver Rummeyer",
+  "repository": "https://github.com/rummeyer/fiestaboard-plugin--wetter",
+  "documentation": "README.md",
+  "icon": "cloud-sun",
+  "category": "weather",
+  "fiestaboard_version": ">=8.25.0",
+  "min_refresh_seconds": 300,
+  "settings_schema": {
+    "type": "object",
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "title": "Enabled",
+        "default": false
+      },
+      "coordinates": {
+        "type": "string",
+        "title": "Coordinates",
+        "description": "Latitude and longitude, e.g. 52.52, 13.405. Right-click a spot in Google Maps or OpenStreetMap and copy the numbers it shows.",
+        "default": ""
+      },
+      "location_name": {
+        "type": "string",
+        "title": "Location name",
+        "description": "Optional. Only used by the {{wetter.location}} variable — the built-in layout has no room for it on a Note.",
+        "default": ""
+      },
+      "language": {
+        "type": "string",
+        "title": "Language",
+        "description": "Language of the condition words and weekday names.",
+        "enum": [
+          "de",
+          "en"
+        ],
+        "enumNames": [
+          "Deutsch",
+          "English"
+        ],
+        "default": "de"
+      },
+      "units": {
+        "type": "string",
+        "title": "Units",
+        "enum": [
+          "metric",
+          "imperial"
+        ],
+        "enumNames": [
+          "Metric (°C, mm, km/h)",
+          "Imperial (°F, in, mph)"
+        ],
+        "default": "metric"
+      },
+      "include_today": {
+        "type": "boolean",
+        "title": "Week starts today",
+        "description": "Off starts the week overview tomorrow, so all seven tiles are days still ahead. Today's low and high are shown either way.",
+        "default": true
+      },
+      "rain_threshold": {
+        "type": "number",
+        "title": "Rain threshold (mm)",
+        "description": "A wet day with less precipitation than this is rated yellow, not red. Open-Meteo reports a day's most severe weather, so a single drizzly hour would otherwise make the whole day red.",
+        "default": 1.0,
+        "minimum": 0
+      },
+      "color_good": {
+        "type": "string",
+        "title": "Color: dry and sunny",
+        "enum": [
+          "green",
+          "blue",
+          "yellow",
+          "orange",
+          "red",
+          "violet",
+          "white"
+        ],
+        "enumNames": [
+          "Green",
+          "Blue",
+          "Yellow",
+          "Orange",
+          "Red",
+          "Violet",
+          "White"
+        ],
+        "default": "green"
+      },
+      "color_mixed": {
+        "type": "string",
+        "title": "Color: cloudy or foggy",
+        "enum": [
+          "yellow",
+          "orange",
+          "white",
+          "green",
+          "blue",
+          "red",
+          "violet"
+        ],
+        "enumNames": [
+          "Yellow",
+          "Orange",
+          "White",
+          "Green",
+          "Blue",
+          "Red",
+          "Violet"
+        ],
+        "default": "yellow"
+      },
+      "color_bad": {
+        "type": "string",
+        "title": "Color: rain, snow or thunder",
+        "enum": [
+          "red",
+          "orange",
+          "violet",
+          "blue",
+          "yellow",
+          "green",
+          "white"
+        ],
+        "enumNames": [
+          "Red",
+          "Orange",
+          "Violet",
+          "Blue",
+          "Yellow",
+          "Green",
+          "White"
+        ],
+        "default": "red"
+      },
+      "degree_sign": {
+        "type": "string",
+        "title": "Degree sign",
+        "description": "Board character 62 is a degree sign on a Flagship. A Note carries a different flap at that position — a heart on some, nothing at all on others — so Auto shows the sign only where it prints as one.",
+        "enum": [
+          "auto",
+          "on",
+          "off"
+        ],
+        "enumNames": [
+          "Auto (skip on Note)",
+          "Always (blank or a heart on a Note)",
+          "Never"
+        ],
+        "default": "auto"
+      },
+      "umlauts": {
+        "type": "string",
+        "title": "Umlauts",
+        "description": "The board has no umlaut tiles. Expand writes BEWOELKT, Strip writes BEWOLKT.",
+        "enum": [
+          "expand",
+          "strip"
+        ],
+        "enumNames": [
+          "Expand (BEWOELKT)",
+          "Strip (BEWOLKT)"
+        ],
+        "default": "expand"
+      },
+      "refresh_seconds": {
+        "type": "integer",
+        "title": "Refresh Interval",
+        "description": "Open-Meteo updates its current conditions every 15 minutes, so polling faster shows nothing new.",
+        "default": 900,
+        "minimum": 300,
+        "maximum": 3600
+      }
+    }
+  },
+  "variables": {
+    "groups": {
+      "now": {
+        "label": "Now"
+      },
+      "today": {
+        "label": "Today"
+      },
+      "week": {
+        "label": "Week"
+      },
+      "layout": {
+        "label": "Board Lines"
+      }
+    },
+    "simple": {
+      "location": {
+        "description": "The location name from the settings, empty when none is set",
+        "type": "string",
+        "max_length": 22,
+        "group": "now",
+        "example": "BERLIN"
+      },
+      "condition": {
+        "description": "Current condition in words",
+        "type": "string",
+        "max_length": 10,
+        "group": "now",
+        "example": "BEWOELKT"
+      },
+      "temp": {
+        "description": "Current temperature in whole degrees, no unit",
+        "type": "string",
+        "max_length": 4,
+        "group": "now",
+        "example": "12"
+      },
+      "feels_like": {
+        "description": "Apparent temperature, no unit",
+        "type": "string",
+        "max_length": 4,
+        "group": "now",
+        "example": "10"
+      },
+      "temp_unit": {
+        "description": "Unit suffix for temperatures, board-aware",
+        "type": "string",
+        "max_length": 2,
+        "group": "now",
+        "example": "°C"
+      },
+      "humidity": {
+        "description": "Relative humidity in percent",
+        "type": "string",
+        "max_length": 3,
+        "group": "now",
+        "example": "71"
+      },
+      "wind": {
+        "description": "Wind speed, km/h or mph",
+        "type": "string",
+        "max_length": 3,
+        "group": "now",
+        "example": "14"
+      },
+      "wind_unit": {
+        "description": "KMH or MPH",
+        "type": "string",
+        "max_length": 3,
+        "group": "now",
+        "example": "KMH"
+      },
+      "color": {
+        "description": "Color tile for today's rating — the same tile today has in the week overview",
+        "type": "string",
+        "max_length": 4,
+        "group": "now",
+        "example": "{65}"
+      },
+      "low": {
+        "description": "Today's low, no unit",
+        "type": "string",
+        "max_length": 4,
+        "group": "today",
+        "example": "7"
+      },
+      "high": {
+        "description": "Today's high, no unit",
+        "type": "string",
+        "max_length": 4,
+        "group": "today",
+        "example": "14"
+      },
+      "rain_chance": {
+        "description": "Today's highest chance of precipitation in percent",
+        "type": "string",
+        "max_length": 3,
+        "group": "today",
+        "example": "20"
+      },
+      "rain": {
+        "description": "Today's precipitation total, mm or inches",
+        "type": "string",
+        "max_length": 5,
+        "group": "today",
+        "example": "0.0"
+      },
+      "week_tiles": {
+        "description": "Seven color tiles, one per day, today (or tomorrow) first",
+        "type": "string",
+        "max_length": 28,
+        "group": "week",
+        "example": "{65}{66}{63}{65}{66}{65}{63}"
+      },
+      "week": {
+        "description": "Weekday initial plus color tile for each day — 14 tiles, fits a Note row",
+        "type": "string",
+        "max_length": 35,
+        "group": "week",
+        "example": "S{65}S{66}M{63}D{65}M{66}D{65}F{63}"
+      },
+      "block": {
+        "description": "The whole laid-out board as one value, rows separated by newlines. Put this on the first template line to fill the board.",
+        "type": "string",
+        "max_length": 400,
+        "group": "layout",
+        "example": "BEWOELKT     12\\nMIN 7  MAX 14  \\nS{65}S{66}M{63}D{65}M{66}D{65}F{63} "
+      },
+      "line1": {
+        "description": "Board row 1 of the layout: condition and temperature",
+        "type": "string",
+        "max_length": 60,
+        "group": "layout",
+        "example": "BEWOELKT     12"
+      },
+      "line2": {
+        "description": "Board row 2 of the layout: today's low and high",
+        "type": "string",
+        "max_length": 60,
+        "group": "layout",
+        "example": "MIN 7  MAX 14  "
+      },
+      "line3": {
+        "description": "Board row 3: the week on a Note, rain and wind on a Flagship",
+        "type": "string",
+        "max_length": 100,
+        "group": "layout",
+        "example": "S{65}S{66}M{63}D{65}M{66}D{65}F{63} "
+      },
+      "line4": {
+        "description": "Board row 4: weekday names on a Flagship, empty on a Note",
+        "type": "string",
+        "max_length": 60,
+        "group": "layout",
+        "example": " SA SO MO DI MI DO FR "
+      },
+      "line5": {
+        "description": "Board row 5: the week as color bars on a Flagship, empty on a Note",
+        "type": "string",
+        "max_length": 100,
+        "group": "layout",
+        "example": " {65}{65} {66}{66} {63}{63} {65}{65} {66}{66} {65}{65} {63}{63} "
+      },
+      "line6": {
+        "description": "Board row 6: each day's high on a Flagship, empty on a Note",
+        "type": "string",
+        "max_length": 60,
+        "group": "layout",
+        "example": " 14 16 12 13 15 14 10 "
+      }
+    },
+    "arrays": {
+      "days": {
+        "label_field": "name",
+        "item_fields": {
+          "name": {
+            "description": "Two-letter weekday",
+            "type": "string",
+            "max_length": 2,
+            "group": "week",
+            "example": "SA"
+          },
+          "date": {
+            "description": "ISO date",
+            "type": "string",
+            "max_length": 10,
+            "group": "week",
+            "example": "2026-10-24"
+          },
+          "condition": {
+            "description": "The day's weather in words",
+            "type": "string",
+            "max_length": 10,
+            "group": "week",
+            "example": "REGEN"
+          },
+          "high": {
+            "description": "High, no unit",
+            "type": "string",
+            "max_length": 4,
+            "group": "week",
+            "example": "14"
+          },
+          "low": {
+            "description": "Low, no unit",
+            "type": "string",
+            "max_length": 4,
+            "group": "week",
+            "example": "7"
+          },
+          "rain": {
+            "description": "Precipitation total, mm or inches",
+            "type": "string",
+            "max_length": 5,
+            "group": "week",
+            "example": "5.2"
+          },
+          "rain_chance": {
+            "description": "Highest chance of precipitation in percent",
+            "type": "string",
+            "max_length": 3,
+            "group": "week",
+            "example": "90"
+          },
+          "rating": {
+            "description": "good, mixed or bad",
+            "type": "string",
+            "max_length": 5,
+            "group": "week",
+            "example": "bad"
+          },
+          "color": {
+            "description": "The day's color tile",
+            "type": "string",
+            "max_length": 4,
+            "group": "week",
+            "example": "{63}"
+          }
+        }
+      }
+    }
+  },
+  "max_lengths": {
+    "location": 22,
+    "condition": 10,
+    "temp": 4,
+    "feels_like": 4,
+    "temp_unit": 2,
+    "humidity": 3,
+    "wind": 3,
+    "wind_unit": 3,
+    "color": 4,
+    "low": 4,
+    "high": 4,
+    "rain_chance": 3,
+    "rain": 5,
+    "week_tiles": 28,
+    "week": 35,
+    "block": 400,
+    "line1": 60,
+    "line2": 60,
+    "line3": 100,
+    "line4": 60,
+    "line5": 100,
+    "line6": 60
+  },
+  "demo": {
+    "name": "Wetter Demo",
+    "device_type": "note",
+    "template": [
+      "{{wetter.block}}",
+      "",
+      ""
+    ],
+    "line_metadata": [
+      {
+        "alignment": "left",
+        "wrap": false
+      },
+      {
+        "alignment": "left",
+        "wrap": false
+      },
+      {
+        "alignment": "left",
+        "wrap": false
+      }
+    ]
+  },
+  "teaser": "BEWOELKT     12",
+  "previews": [
+    {
+      "device_type": "note",
+      "rows": [
+        "BEWOELKT     12",
+        "MIN 7  MAX 14  ",
+        "S{65}S{66}M{63}D{65}M{66}D{65}F{63} "
+      ]
+    },
+    {
+      "device_type": "flagship",
+      "rows": [
+        "BEWOELKT           12°",
+        "MIN 7°  MAX 14°       ",
+        "REGEN 20%   WIND 14KMH",
+        " SA SO MO DI MI DO FR ",
+        " {65}{65} {66}{66} {63}{63} {65}{65} {66}{66} {65}{65} {63}{63} ",
+        " 14 16 12 13 15 14 10 "
+      ]
+    }
+  ]
+}

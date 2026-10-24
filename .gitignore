@@ -1,0 +1,13 @@
+# Local dev scaffolding that mirrors how FiestaBoard loads the plugin.
+# CI recreates it; see README "Development".
+/plugins/
+
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coveragerc
+htmlcov/
+.DS_Store

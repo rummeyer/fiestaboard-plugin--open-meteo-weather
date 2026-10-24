@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: Fiestaboard/FiestaBoard
+          path: fiestaboard-core
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r fiestaboard-core/requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Set up plugin directory structure
+        run: |
+          mkdir -p plugins
+          touch plugins/__init__.py
+          ln -s .. plugins/wetter
+
+      - name: Run tests
+        env:
+          PYTHONPATH: "${{ github.workspace }}:fiestaboard-core"
+        run: |
+          cat > .coveragerc <<'RC'
+          [run]
+          omit = fiestaboard-core/*
+          RC
+          pytest tests/ -v --cov=. --cov-report=term-missing --cov-fail-under=85 --ignore=fiestaboard-core
