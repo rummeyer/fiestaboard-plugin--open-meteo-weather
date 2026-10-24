@@ -1,4 +1,4 @@
-# Wetter Plugin
+# Open-Meteo Plugin
 
 The weather for any coordinates on a Vestaboard Note: what it is doing outside right now with temperature and humidity, today's low and high, and this week as one colored tile per day.
 
@@ -52,15 +52,15 @@ Tile 62 is a degree sign on a Flagship; some Notes carry a heart or a blank flap
 ## Setup
 
 1. Install the plugin from its repository URL in FiestaBoard.
-2. Open **Integrations → Wetter** and enter the **Coordinates**, e.g. `52.52, 13.405`. In Google Maps, right-click a spot and click the numbers at the top of the menu to copy them; OpenStreetMap shows them in the URL and under "Show address".
-3. Enable the plugin and put `{{wetter.block}}` on the first line of a page, with the line set to left alignment and no wrap.
+2. Open **Integrations → Open-Meteo** and enter the **Coordinates**, e.g. `52.52, 13.405`. In Google Maps, right-click a spot and click the numbers at the top of the menu to copy them; OpenStreetMap shows them in the URL and under "Show address".
+3. Enable the plugin and put `{{open_meteo.block}}` on the first line of a page, with the line set to left alignment and no wrap.
 
 ## Settings
 
 | Setting | Default | |
 |---------|---------|---|
 | Coordinates | — | `latitude, longitude`. Comma, semicolon or space between them. |
-| Location name | — | Only for `{{wetter.location}}`. |
+| Location name | — | Only for `{{open_meteo.location}}`. |
 | Language | Deutsch | Condition words and weekday names, `de` or `en`. |
 | Units | Metric | Imperial asks Open-Meteo for °F, mph and inches. |
 | Week overview | Calendar week | Monday–Sunday, or the next seven days from today or from tomorrow. |
@@ -76,50 +76,50 @@ Tile 62 is a degree sign on a Flagship; some Notes carry a heart or a blank flap
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `{{wetter.condition}}` | Current condition | `BEWOELKT` |
-| `{{wetter.condition_short}}` | The same in six tiles or fewer | `WOLKIG` |
-| `{{wetter.temp}}` | Current temperature, whole degrees, no unit | `12` |
-| `{{wetter.feels_like}}` | Apparent temperature | `10` |
-| `{{wetter.temp_unit}}` | Unit suffix, `C` when the degree sign is off | `°C` |
-| `{{wetter.humidity}}` | Relative humidity in % | `71` |
-| `{{wetter.wind}}` / `{{wetter.wind_unit}}` | Wind speed and unit | `14` / `KMH` |
-| `{{wetter.color}}` | Today's color tile | `{69}` |
-| `{{wetter.location}}` | Location name from the settings | `BERLIN` |
+| `{{open_meteo.condition}}` | Current condition | `BEWOELKT` |
+| `{{open_meteo.condition_short}}` | The same in six tiles or fewer | `WOLKIG` |
+| `{{open_meteo.temp}}` | Current temperature, whole degrees, no unit | `12` |
+| `{{open_meteo.feels_like}}` | Apparent temperature | `10` |
+| `{{open_meteo.temp_unit}}` | Unit suffix, `C` when the degree sign is off | `°C` |
+| `{{open_meteo.humidity}}` | Relative humidity in % | `71` |
+| `{{open_meteo.wind}}` / `{{open_meteo.wind_unit}}` | Wind speed and unit | `14` / `KMH` |
+| `{{open_meteo.color}}` | Today's color tile | `{69}` |
+| `{{open_meteo.location}}` | Location name from the settings | `BERLIN` |
 
 ### Today
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `{{wetter.low}}` / `{{wetter.high}}` | Today's low and high | `7` / `14` |
-| `{{wetter.rain_chance}}` | Highest chance of precipitation today, % | `20` |
-| `{{wetter.rain}}` | Precipitation total today, mm or in | `0.0` |
+| `{{open_meteo.low}}` / `{{open_meteo.high}}` | Today's low and high | `7` / `14` |
+| `{{open_meteo.rain_chance}}` | Highest chance of precipitation today, % | `20` |
+| `{{open_meteo.rain}}` | Precipitation total today, mm or in | `0.0` |
 
 ### Week
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `{{wetter.week}}` | Initial + tile per day, 14 tiles | `M{63}D{66}M{69}…` |
-| `{{wetter.week_tiles}}` | Just the seven tiles | `{63}{66}{69}…` |
-| `{{wetter.days.N.name}}` | Weekday, N = 0…6 (0 is Monday in a calendar week) | `MO` |
-| `{{wetter.days.N.condition}}` | The day's weather | `REGEN` |
-| `{{wetter.days.N.high}}` / `.low` | High and low | `12` / `7` |
-| `{{wetter.days.N.rain}}` / `.rain_chance` | Precipitation total and chance | `5.2` / `90` |
-| `{{wetter.days.N.rating}}` / `.color` | `good`, `mixed` or `bad`, and its tile | `bad` / `{63}` |
-| `{{wetter.days.N.date}}` | ISO date | `2026-10-26` |
+| `{{open_meteo.week}}` | Initial + tile per day, 14 tiles | `M{63}D{66}M{69}…` |
+| `{{open_meteo.week_tiles}}` | Just the seven tiles | `{63}{66}{69}…` |
+| `{{open_meteo.days.N.name}}` | Weekday, N = 0…6 (0 is Monday in a calendar week) | `MO` |
+| `{{open_meteo.days.N.condition}}` | The day's weather | `REGEN` |
+| `{{open_meteo.days.N.high}}` / `.low` | High and low | `12` / `7` |
+| `{{open_meteo.days.N.rain}}` / `.rain_chance` | Precipitation total and chance | `5.2` / `90` |
+| `{{open_meteo.days.N.rating}}` / `.color` | `good`, `mixed` or `bad`, and its tile | `bad` / `{63}` |
+| `{{open_meteo.days.N.date}}` | ISO date | `2026-10-26` |
 
 ### Board Lines
 
 | Variable | Description |
 |----------|-------------|
-| `{{wetter.block}}` | The whole layout, rows separated by newlines — put it on the first template line |
-| `{{wetter.line1}}` … `{{wetter.line6}}` | The same rows one by one, full board width; empty past the board's height |
+| `{{open_meteo.block}}` | The whole layout, rows separated by newlines — put it on the first template line |
+| `{{open_meteo.line1}}` … `{{open_meteo.line6}}` | The same rows one by one, full board width; empty past the board's height |
 
 ### A page of your own
 
 ```
-{{wetter.condition}} {{wetter.temp}}{{wetter.temp_unit}}
-{{wetter.low}}/{{wetter.high}} {{wetter.rain_chance}}%
-{{wetter.week}}
+{{open_meteo.condition}} {{open_meteo.temp}}{{open_meteo.temp_unit}}
+{{open_meteo.low}}/{{open_meteo.high}} {{open_meteo.rain_chance}}%
+{{open_meteo.week}}
 ```
 
 ## Development
@@ -131,7 +131,7 @@ git clone https://github.com/Fiestaboard/FiestaBoard.git ../FiestaBoard
 
 # Import paths matching how FiestaBoard loads the plugin
 mkdir -p plugins && touch plugins/__init__.py
-ln -sfn .. plugins/wetter
+ln -sfn .. plugins/open_meteo
 
 python -m venv .venv && .venv/bin/pip install pytest pytest-cov requests
 PYTHONPATH=".:../FiestaBoard" .venv/bin/pytest tests/ --cov=. --cov-report=term-missing

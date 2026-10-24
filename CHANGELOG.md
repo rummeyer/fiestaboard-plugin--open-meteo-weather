@@ -9,6 +9,18 @@ the two drift apart.
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-10-24
+
+### Changed
+
+- **Renamed from Wetter to Open-Meteo**, after the forecast service it reads.
+  The plugin id is now `open_meteo`, so template variables move from
+  `{{wetter.*}}` to `{{open_meteo.*}}`, and the repository from
+  `fiestaboard-plugin--wetter` to `fiestaboard-plugin--open-meteo` (GitHub
+  redirects the old URL). FiestaBoard treats it as a new plugin: install it
+  from the new URL, copy the settings over, update templates, and uninstall
+  Wetter.
+
 ## [1.4.0] — 2026-10-24
 
 ### Added

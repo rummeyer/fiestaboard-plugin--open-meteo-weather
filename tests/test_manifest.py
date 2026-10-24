@@ -12,7 +12,7 @@ import re
 import pytest
 from src.devices import BoardContext
 
-from plugins.wetter import (
+from plugins.open_meteo import (
     COLOR_TILES,
     DEFAULT_COLORS,
     DEFAULT_DEGREE,
@@ -22,7 +22,7 @@ from plugins.wetter import (
     DEGREE_CHOICES,
     LANGUAGES,
     UNITS,
-    WetterPlugin,
+    OpenMeteoPlugin,
 )
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -42,7 +42,7 @@ def count_tiles(row: str) -> int:
 
 class TestIdentity:
     def test_id_matches_the_plugin_class(self, manifest):
-        assert manifest["id"] == WetterPlugin(manifest).plugin_id
+        assert manifest["id"] == OpenMeteoPlugin(manifest).plugin_id
 
     def test_version_is_semver(self, manifest):
         assert re.fullmatch(r"\d+\.\d+\.\d+", manifest["version"])

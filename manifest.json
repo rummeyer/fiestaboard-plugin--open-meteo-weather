@@ -1,10 +1,10 @@
 {
-  "id": "wetter",
-  "name": "Wetter",
-  "version": "1.4.0",
+  "id": "open_meteo",
+  "name": "Open-Meteo",
+  "version": "2.0.0",
   "description": "Current weather and a colored week overview for any coordinates — condition, temperature, today's low and high, and one green, yellow or red tile per day. Built for the Note, adapts to the Flagship. Forecasts from Open-Meteo, no API key needed.",
   "author": "Oliver Rummeyer",
-  "repository": "https://github.com/rummeyer/fiestaboard-plugin--wetter",
+  "repository": "https://github.com/rummeyer/fiestaboard-plugin--open-meteo",
   "documentation": "README.md",
   "icon": "cloud-sun",
   "category": "weather",
@@ -27,7 +27,7 @@
       "location_name": {
         "type": "string",
         "title": "Location name",
-        "description": "Optional. Only used by the {{wetter.location}} variable — the built-in layout has no room for it on a Note.",
+        "description": "Optional. Only used by the {{open_meteo.location}} variable — the built-in layout has no room for it on a Note.",
         "default": ""
       },
       "language": {
@@ -472,10 +472,10 @@
     "line6": 60
   },
   "demo": {
-    "name": "Wetter Demo",
+    "name": "Open-Meteo Demo",
     "device_type": "note",
     "template": [
-      "{{wetter.block}}",
+      "{{open_meteo.block}}",
       "",
       ""
     ],

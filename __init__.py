@@ -1,4 +1,4 @@
-"""Wetter plugin for FiestaBoard.
+"""Open-Meteo plugin for FiestaBoard.
 
 Puts the weather for one set of coordinates on the board: the current
 condition and temperature, today's low and high, and a week at a glance as one
@@ -213,7 +213,7 @@ WORDS = {
 }
 
 
-class WetterError(Exception):
+class OpenMeteoError(Exception):
     """Open-Meteo could not be reached or answered with something unusable."""
 
 
@@ -353,14 +353,14 @@ def parse_forecast(body: dict[str, Any]) -> Forecast:
     daily = body.get("daily") or {}
     dates = daily.get("time")
     if not isinstance(dates, list) or not dates:
-        raise WetterError("Open-Meteo returned no daily forecast")
+        raise OpenMeteoError("Open-Meteo returned no daily forecast")
 
     days = []
     for index, raw in enumerate(dates):
         try:
             day = date.fromisoformat(str(raw))
         except ValueError as error:
-            raise WetterError(f"Open-Meteo returned an unreadable date: {raw!r}") from error
+            raise OpenMeteoError(f"Open-Meteo returned an unreadable date: {raw!r}") from error
         days.append(
             Day(
                 day=day,
@@ -399,14 +399,14 @@ def fetch_forecast_body(params: dict[str, Any]) -> dict[str, Any]:
         try:
             response = requests.get(FORECAST_URL, params=params, timeout=HTTP_TIMEOUT)
         except requests.RequestException as error:
-            raise WetterError(f"Open-Meteo is unreachable: {error}") from error
+            raise OpenMeteoError(f"Open-Meteo is unreachable: {error}") from error
         try:
             body = response.json()
         except ValueError as error:
-            raise WetterError(f"Open-Meteo answered HTTP {response.status_code} without JSON") from error
+            raise OpenMeteoError(f"Open-Meteo answered HTTP {response.status_code} without JSON") from error
         if response.status_code != 200 or not isinstance(body, dict) or body.get("error"):
             reason = body.get("reason") if isinstance(body, dict) else None
-            raise WetterError(f"Open-Meteo refused the request: {reason or f'HTTP {response.status_code}'}")
+            raise OpenMeteoError(f"Open-Meteo refused the request: {reason or f'HTTP {response.status_code}'}")
 
         _shared_cache[key] = (time.monotonic(), body)
         return body
@@ -682,12 +682,12 @@ def layout(view: View, width: int, height: int) -> list[str]:
 # --------------------------------------------------------------------------
 
 
-class WetterPlugin(PluginBase):
+class OpenMeteoPlugin(PluginBase):
     """Current weather and a colored week overview for one location."""
 
     @property
     def plugin_id(self) -> str:
-        return "wetter"
+        return "open_meteo"
 
     def validate_config(self, config: dict[str, Any]) -> list[str]:
         """Reject coordinates the plugin could not ask Open-Meteo about."""
@@ -723,8 +723,8 @@ class WetterPlugin(PluginBase):
         try:
             forecast = parse_forecast(fetch_forecast_body(request_params(*coordinates, units, week_start)))
             if today_index >= len(forecast.days):
-                raise WetterError("Open-Meteo returned fewer days than were asked for")
-        except WetterError as error:
+                raise OpenMeteoError("Open-Meteo returned fewer days than were asked for")
+        except OpenMeteoError as error:
             logger.warning("Open-Meteo fetch failed: %s", error)
             return PluginResult(available=False, error=str(error))
         except Exception as error:  # noqa: BLE001 — a bad payload must not break the render loop
@@ -738,7 +738,7 @@ class WetterPlugin(PluginBase):
         lines = layout(view, width, height)
 
         # One variable that fills the whole board. FiestaBoard's template engine
-        # splits a value on "\n" across board rows, so `{{wetter.block}}` on the
+        # splits a value on "\n" across board rows, so `{{open_meteo.block}}` on the
         # first template line reproduces the layout without needing |wrap.
         data["block"] = "\n".join(lines)
         # line1..line6 mirror the same rows individually. They keep their full
@@ -842,4 +842,4 @@ def _whole(value: int | None) -> str:
 
 
 # Export the plugin class
-Plugin = WetterPlugin
+Plugin = OpenMeteoPlugin
