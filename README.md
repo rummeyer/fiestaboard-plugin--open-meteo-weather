@@ -45,7 +45,7 @@ REGEN 20%   WIND 14KMH
  10 13 12 10 15 14 16
 ```
 
-The layout is picked from the board's size, not its type: anything at least 20×6 gets the Flagship layout, anything smaller the compact one. A board wider than 27 tiles writes the weekday names out in full on the compact layout (`SA🟨 SO🟩 …`).
+The layout is picked from the board's size, not its type: anything at least 20×6 gets the Flagship layout, anything smaller the compact one. A board wider than 27 tiles writes the weekday names out in full on the compact layout (`MO🟥 DI🟩 …`).
 
 Tile 62 is a degree sign on a Flagship; some Notes carry a heart or a blank flap there instead. If yours does, set **Degree sign** to Auto and the Note shows `12C`.
 
