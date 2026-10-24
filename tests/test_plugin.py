@@ -486,6 +486,14 @@ class TestPlugin:
         data = make_plugin(color_good="blue", color_bad="violet", week_start="today").get_data(NOTE).data
         assert data["week_tiles"] == "{69}{67}{68}{69}{67}{69}{68}"
 
+    def test_the_background_tile_is_offered(self, make_plugin):
+        data = make_plugin(color_mixed="background", week_start="today").get_data(NOTE).data
+        assert data["days"][0]["color"] == "{70}"
+
+    def test_a_saved_white_still_means_contrast(self, make_plugin):
+        data = make_plugin(color_mixed="white", week_start="today").get_data(NOTE).data
+        assert data["days"][0]["color"] == WHITE
+
     def test_grey_days_can_be_yellow_again(self, make_plugin):
         data = make_plugin(color_mixed="yellow", week_start="today").get_data(NOTE).data
         assert data["days"][0]["color"] == YELLOW

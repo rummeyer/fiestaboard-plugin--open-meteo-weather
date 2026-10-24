@@ -76,6 +76,11 @@ COLOR_TILES = {
     "green": "{66}",
     "blue": "{67}",
     "violet": "{68}",
+    # Tile 69 contrasts with the board: white on a black board, black on a
+    # white one. Tile 70 is the board's own color, so it reads as a gap.
+    "contrast": "{69}",
+    "background": "{70}",
+    # Saved by 1.2.x, before the two were named for what they show.
     "white": "{69}",
 }
 
@@ -91,9 +96,9 @@ DEFAULT_DEGREE = "on"
 GOOD = "good"
 MIXED = "mixed"
 BAD = "bad"
-# The board has no grey tile; white is the most neutral one it has, and reads
-# as "nothing special" between the green and the red.
-DEFAULT_COLORS = {GOOD: "green", MIXED: "white", BAD: "red"}
+# The contrast tile is the most neutral one the board has, and reads as
+# "nothing special" between the green and the red.
+DEFAULT_COLORS = {GOOD: "green", MIXED: "contrast", BAD: "red"}
 
 # Today's low and high are marked cold and hot instead of being labelled.
 COLD_TILE = COLOR_TILES["blue"]

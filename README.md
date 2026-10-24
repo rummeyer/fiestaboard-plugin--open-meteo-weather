@@ -19,10 +19,10 @@ Each day of the week overview is rated and gets a color tile:
 | Tile | Rating | Weather |
 |------|--------|---------|
 | 🟩 green | good | sunny or mostly sunny (WMO 0–1) |
-| ⬜ white | mixed | cloudy, overcast or fog (WMO 2–3, 45, 48) — or a wet day with less precipitation than the **rain threshold** |
+| ⬜ contrast | mixed | cloudy, overcast or fog (WMO 2–3, 45, 48) — or a wet day with less precipitation than the **rain threshold** |
 | 🟥 red | bad | drizzle, rain, snow, showers or thunder (WMO 51 and up) |
 
-The rain threshold (default 1 mm) is there because Open-Meteo reports the most severe weather of the day: one drizzly hour at 6 a.m. makes a day "drizzle" with 0.1 mm to show for it. The three colors can be changed in the settings. The board has no grey tile, so cloudy days are white by default. White is a contrast tile, though: it is white on a black board and **black on a white board** — on a white Note, pick yellow or orange for cloudy days instead.
+The rain threshold (default 1 mm) is there because Open-Meteo reports the most severe weather of the day: one drizzly hour at 6 a.m. makes a day "drizzle" with 0.1 mm to show for it. The three colors can be changed in the settings. Besides the six colors there are two neutral tiles: **Contrast** is white on a black board and black on a white one, **Background** is the board's own color and reads as a gap. Cloudy days use Contrast by default.
 
 ### On a Note (15×3)
 
@@ -65,7 +65,7 @@ Tile 62 is a degree sign on a Flagship; some Notes carry a heart or a blank flap
 | Units | Metric | Imperial asks Open-Meteo for °F, mph and inches. |
 | Week overview | Calendar week | Monday–Sunday, or the next seven days from today or from tomorrow. |
 | Rain threshold (mm) | 1.0 | Wet days with less precipitation than this are yellow, not red. |
-| Colors | green / white / red | One per rating. |
+| Colors | green / contrast / red | One per rating: a color, Contrast or Background. |
 | Degree sign | Always | Auto skips it on note-shaped boards. |
 | Umlauts | Expand | `BEWOELKT` or `BEWOLKT`. |
 | Refresh interval | 900 s | Minimum 300 s. Open-Meteo updates current conditions every 15 minutes. |

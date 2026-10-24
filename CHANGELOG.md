@@ -9,10 +9,14 @@ the two drift apart.
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-10-24
+
 ### Changed
 
-- The color settings say what *White* really does: tile 69 is white on a black
-  board and black on a white one. The board has no white tile for white boards.
+- The color settings offer **Contrast** and **Background** instead of *White*.
+  Contrast (tile 69) is white on a black board and black on a white one;
+  Background (tile 70) is the board's own color. A saved *White* keeps working
+  as Contrast.
 
 ## [1.2.0] — 2026-10-24
 

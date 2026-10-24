@@ -1,7 +1,7 @@
 {
   "id": "wetter",
   "name": "Wetter",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Current weather and a colored week overview for any coordinates — condition, temperature, today's low and high, and one green, yellow or red tile per day. Built for the Note, adapts to the Flagship. Forecasts from Open-Meteo, no API key needed.",
   "author": "Oliver Rummeyer",
   "repository": "https://github.com/rummeyer/fiestaboard-plugin--wetter",
@@ -90,7 +90,8 @@
           "orange",
           "red",
           "violet",
-          "white"
+          "contrast",
+          "background"
         ],
         "enumNames": [
           "Green",
@@ -99,7 +100,8 @@
           "Orange",
           "Red",
           "Violet",
-          "White (black on a white board)"
+          "Contrast",
+          "Background"
         ],
         "default": "green"
       },
@@ -107,7 +109,8 @@
         "type": "string",
         "title": "Color: cloudy or foggy",
         "enum": [
-          "white",
+          "contrast",
+          "background",
           "yellow",
           "orange",
           "green",
@@ -116,7 +119,8 @@
           "violet"
         ],
         "enumNames": [
-          "White (black on a white board)",
+          "Contrast",
+          "Background",
           "Yellow",
           "Orange",
           "Green",
@@ -124,8 +128,7 @@
           "Red",
           "Violet"
         ],
-        "default": "white",
-        "description": "The board has no grey tile. White is a contrast tile: white on a black board, black on a white one. On a white board, yellow or orange read as the softer choice."
+        "default": "contrast"
       },
       "color_bad": {
         "type": "string",
@@ -137,7 +140,8 @@
           "blue",
           "yellow",
           "green",
-          "white"
+          "contrast",
+          "background"
         ],
         "enumNames": [
           "Red",
@@ -146,7 +150,8 @@
           "Blue",
           "Yellow",
           "Green",
-          "White (black on a white board)"
+          "Contrast",
+          "Background"
         ],
         "default": "red"
       },
