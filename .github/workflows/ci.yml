@@ -28,7 +28,7 @@ jobs:
         run: |
           mkdir -p plugins
           touch plugins/__init__.py
-          ln -s .. plugins/open_meteo
+          ln -s .. plugins/open_meteo_weather
 
       - name: Run tests
         env:

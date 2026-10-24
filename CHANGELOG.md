@@ -9,6 +9,17 @@ the two drift apart.
 
 ## [Unreleased]
 
+## [3.0.0] — 2026-10-24
+
+### Changed
+
+- **Renamed again, to Open Meteo Weather** (no hyphen in the plugin name;
+  the forecast service keeps its own spelling, Open-Meteo). The plugin id is
+  now `open_meteo_weather`, so template variables move from
+  `{{open_meteo.*}}` to `{{open_meteo_weather.*}}`, and the repository to
+  `fiestaboard-plugin--open-meteo-weather` (GitHub redirects both older
+  URLs). FiestaBoard treats it as a new plugin, as with 2.0.0.
+
 ## [2.0.0] — 2026-10-24
 
 ### Changed

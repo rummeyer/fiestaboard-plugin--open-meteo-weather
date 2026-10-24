@@ -1,4 +1,4 @@
-"""Shared fixtures for the Open-Meteo plugin tests.
+"""Shared fixtures for the Open Meteo Weather plugin tests.
 
 Nothing here touches the network: the forecast is a hand-built copy of what
 Open-Meteo returns, and the plugin fixture stubs the one function that speaks
@@ -10,8 +10,8 @@ import pathlib
 
 import pytest
 
-from plugins import open_meteo
-from plugins.open_meteo import OpenMeteoPlugin
+from plugins import open_meteo_weather
+from plugins.open_meteo_weather import OpenMeteoWeatherPlugin
 
 MANIFEST = json.loads((pathlib.Path(__file__).resolve().parent.parent / "manifest.json").read_text())
 
@@ -92,7 +92,7 @@ def calls(monkeypatch):
         sent.append(params)
         return answer(params)
 
-    monkeypatch.setattr(open_meteo, "fetch_forecast_body", fake_fetch)
+    monkeypatch.setattr(open_meteo_weather, "fetch_forecast_body", fake_fetch)
     return sent
 
 
@@ -101,7 +101,7 @@ def make_plugin(calls):
     """Build a configured plugin instance whose forecast comes from the fixture."""
 
     def _make(**config):
-        plugin = OpenMeteoPlugin(MANIFEST)
+        plugin = OpenMeteoWeatherPlugin(MANIFEST)
         plugin.config = {"coordinates": COORDINATES, **config}
         return plugin
 

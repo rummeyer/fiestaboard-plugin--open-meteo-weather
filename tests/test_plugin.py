@@ -1,17 +1,17 @@
-"""Tests for the Open-Meteo plugin."""
+"""Tests for the Open Meteo Weather plugin."""
 
 import pytest
 import requests
 from src.devices import BoardContext
 
-from plugins import open_meteo
-from plugins.open_meteo import (
+from plugins import open_meteo_weather
+from plugins.open_meteo_weather import (
     BAD,
     GOOD,
     MIXED,
     View,
-    OpenMeteoError,
-    OpenMeteoPlugin,
+    OpenMeteoWeatherError,
+    OpenMeteoWeatherPlugin,
     compose,
     condition_label,
     degree_sign,
@@ -124,22 +124,22 @@ class TestOpenMeteo:
         assert len(forecast.days) == 14
 
     def test_no_daily_forecast_is_an_error(self):
-        with pytest.raises(OpenMeteoError):
+        with pytest.raises(OpenMeteoWeatherError):
             parse_forecast({"current": {}})
 
     def test_an_unreadable_date_is_an_error(self):
         body = forecast_body()
         body["daily"]["time"][0] = "Saturday"
-        with pytest.raises(OpenMeteoError):
+        with pytest.raises(OpenMeteoWeatherError):
             parse_forecast(body)
 
 
 class TestHttp:
     @pytest.fixture(autouse=True)
     def fresh_cache(self):
-        open_meteo.clear_shared_cache()
+        open_meteo_weather.clear_shared_cache()
         yield
-        open_meteo.clear_shared_cache()
+        open_meteo_weather.clear_shared_cache()
 
     def test_boards_asking_together_share_one_call(self, monkeypatch):
         sent = []
@@ -164,7 +164,7 @@ class TestHttp:
         sent = []
         # Stored at 0, looked up again at 500 — long past the shared window.
         clock = iter([0.0, 500.0, 500.0])
-        monkeypatch.setattr(open_meteo.time, "monotonic", lambda: next(clock))
+        monkeypatch.setattr(open_meteo_weather.time, "monotonic", lambda: next(clock))
         monkeypatch.setattr(requests, "get", lambda url, params, timeout: sent.append(1) or FakeResponse(payload={}))
         params = request_params(52.52, 13.405, "metric", "today")
         fetch_forecast_body(params)
@@ -176,30 +176,30 @@ class TestHttp:
             raise requests.ConnectionError("no route")
 
         monkeypatch.setattr(requests, "get", fail)
-        with pytest.raises(OpenMeteoError, match="unreachable"):
+        with pytest.raises(OpenMeteoWeatherError, match="unreachable"):
             fetch_forecast_body(request_params(52.52, 13.405, "metric", "today"))
 
     def test_open_meteos_own_reason_is_passed_on(self, monkeypatch):
         payload = {"error": True, "reason": "Latitude must be in range of -90 to 90°."}
         monkeypatch.setattr(requests, "get", lambda url, params, timeout: FakeResponse(400, payload))
-        with pytest.raises(OpenMeteoError, match="Latitude must be"):
+        with pytest.raises(OpenMeteoWeatherError, match="Latitude must be"):
             fetch_forecast_body(request_params(52.52, 13.405, "metric", "today"))
 
     def test_a_server_error_without_a_reason_names_the_status(self, monkeypatch):
         monkeypatch.setattr(requests, "get", lambda url, params, timeout: FakeResponse(502, []))
-        with pytest.raises(OpenMeteoError, match="HTTP 502"):
+        with pytest.raises(OpenMeteoWeatherError, match="HTTP 502"):
             fetch_forecast_body(request_params(52.52, 13.405, "metric", "today"))
 
     def test_a_non_json_answer_is_reported(self, monkeypatch):
         monkeypatch.setattr(requests, "get", lambda url, params, timeout: FakeResponse(503, raw=True))
-        with pytest.raises(OpenMeteoError, match="without JSON"):
+        with pytest.raises(OpenMeteoWeatherError, match="without JSON"):
             fetch_forecast_body(request_params(52.52, 13.405, "metric", "today"))
 
     def test_a_failed_call_is_not_cached(self, monkeypatch):
         answers = iter([FakeResponse(502, {}), FakeResponse(payload=forecast_body())])
         monkeypatch.setattr(requests, "get", lambda url, params, timeout: next(answers))
         params = request_params(52.52, 13.405, "metric", "today")
-        with pytest.raises(OpenMeteoError):
+        with pytest.raises(OpenMeteoWeatherError):
             fetch_forecast_body(params)
         assert fetch_forecast_body(params)["daily"]
 
@@ -252,7 +252,7 @@ class TestText:
 
     def test_every_condition_label_leaves_room_for_a_temperature_on_a_note(self):
         """15 tiles = label + space + "-12"/"104"; a longer label would be cut."""
-        for language, labels in open_meteo.CONDITIONS.items():
+        for language, labels in open_meteo_weather.CONDITIONS.items():
             for code, label in labels.items():
                 assert len(to_board_text(label)) <= 10, f"{language} {code} {label}"
 
@@ -263,7 +263,7 @@ class TestText:
 
     def test_every_short_label_fits_next_to_temperature_and_humidity_on_a_note(self):
         """15 tiles minus " 12°C 71%" leave six for the word."""
-        for language, labels in open_meteo.CONDITIONS.items():
+        for language, labels in open_meteo_weather.CONDITIONS.items():
             for code in labels:
                 for is_day in (True, False):
                     short = to_board_text(condition_label(code, is_day, language, short=True))
@@ -363,7 +363,7 @@ def view(**overrides):
         "marks": [YELLOW, GREEN, RED, YELLOW, GREEN, YELLOW, RED],
         "highs": ["14", "16", "12", "13", "15", "14", "10"],
         "unit": "°C",
-        "words": open_meteo.WORDS["de"],
+        "words": open_meteo_weather.WORDS["de"],
         "wind_unit": "KMH",
     }
     return View(**{**defaults, **overrides})
@@ -425,7 +425,7 @@ class TestLayout:
 
 class TestPlugin:
     def test_unconfigured_coordinates_are_reported(self):
-        plugin = OpenMeteoPlugin(MANIFEST)
+        plugin = OpenMeteoWeatherPlugin(MANIFEST)
         plugin.config = {}
         result = plugin.fetch_data()
         assert not result.available
@@ -458,7 +458,7 @@ class TestPlugin:
         assert result.data["temp_unit"] == " C"
 
     def test_too_few_days_back_makes_the_plugin_unavailable(self, make_plugin, monkeypatch):
-        monkeypatch.setattr(open_meteo, "fetch_forecast_body", lambda params: {"daily": {"time": ["2026-10-24"]}})
+        monkeypatch.setattr(open_meteo_weather, "fetch_forecast_body", lambda params: {"daily": {"time": ["2026-10-24"]}})
         result = make_plugin().fetch_data()
         assert not result.available
         assert "fewer days" in result.error
@@ -538,23 +538,23 @@ class TestPlugin:
 
     def test_an_api_failure_makes_the_plugin_unavailable(self, make_plugin, monkeypatch):
         def fail(params):
-            raise OpenMeteoError("Open-Meteo is unreachable")
+            raise OpenMeteoWeatherError("Open-Meteo is unreachable")
 
-        monkeypatch.setattr(open_meteo, "fetch_forecast_body", fail)
+        monkeypatch.setattr(open_meteo_weather, "fetch_forecast_body", fail)
         result = make_plugin().fetch_data()
         assert not result.available
         assert result.error == "Open-Meteo is unreachable"
 
     def test_an_unexpected_payload_does_not_break_the_render_loop(self, make_plugin, monkeypatch):
         monkeypatch.setattr(
-            open_meteo, "fetch_forecast_body", lambda params: {"daily": {"time": ["2026-10-24"]}, "current": "x"}
+            open_meteo_weather, "fetch_forecast_body", lambda params: {"daily": {"time": ["2026-10-24"]}, "current": "x"}
         )
         result = make_plugin().fetch_data()
         assert not result.available
 
     def test_a_config_change_forgets_the_old_answer(self, make_plugin, monkeypatch):
         cleared = []
-        monkeypatch.setattr(open_meteo, "clear_shared_cache", lambda: cleared.append(1))
+        monkeypatch.setattr(open_meteo_weather, "clear_shared_cache", lambda: cleared.append(1))
         plugin = make_plugin()
         plugin.on_config_change({}, {"coordinates": "48.14, 11.58"})
         assert cleared
@@ -562,15 +562,15 @@ class TestPlugin:
 
 class TestValidation:
     def test_valid_settings_pass(self):
-        assert OpenMeteoPlugin(MANIFEST).validate_config({"coordinates": "52.52, 13.405", "rain_threshold": 2}) == []
+        assert OpenMeteoWeatherPlugin(MANIFEST).validate_config({"coordinates": "52.52, 13.405", "rain_threshold": 2}) == []
 
     def test_empty_coordinates_are_allowed_until_the_user_fills_them_in(self):
-        assert OpenMeteoPlugin(MANIFEST).validate_config({"coordinates": ""}) == []
+        assert OpenMeteoWeatherPlugin(MANIFEST).validate_config({"coordinates": ""}) == []
 
     def test_bad_coordinates_are_rejected(self):
-        errors = OpenMeteoPlugin(MANIFEST).validate_config({"coordinates": "Berlin"})
+        errors = OpenMeteoWeatherPlugin(MANIFEST).validate_config({"coordinates": "Berlin"})
         assert errors and "52.52, 13.405" in errors[0]
 
     @pytest.mark.parametrize("threshold", [-1, "viel"])
     def test_a_bad_threshold_is_rejected(self, threshold):
-        assert OpenMeteoPlugin(MANIFEST).validate_config({"rain_threshold": threshold})
+        assert OpenMeteoWeatherPlugin(MANIFEST).validate_config({"rain_threshold": threshold})
