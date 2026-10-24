@@ -91,7 +91,9 @@ DEFAULT_DEGREE = "on"
 GOOD = "good"
 MIXED = "mixed"
 BAD = "bad"
-DEFAULT_COLORS = {GOOD: "green", MIXED: "yellow", BAD: "red"}
+# The board has no grey tile; white is the most neutral one it has, and reads
+# as "nothing special" between the green and the red.
+DEFAULT_COLORS = {GOOD: "green", MIXED: "white", BAD: "red"}
 
 # Today's low and high are marked cold and hot instead of being labelled.
 COLD_TILE = COLOR_TILES["blue"]
@@ -172,6 +174,28 @@ CONDITIONS = {
 }
 # A clear sky at night is not sunny.
 CLEAR_NIGHT = {"de": "KLAR", "en": "CLEAR"}
+
+# Six tiles or fewer, for when the full word does not fit next to the
+# temperature and humidity: a Note's 15 tiles minus " 12°C 71%" leave six.
+# Only the labels longer than that need an entry.
+SHORT_CONDITIONS = {
+    "de": {
+        "BEWÖLKT": "WOLKIG",
+        "BEDECKT": "TRÜB",
+        "EISREGEN": "GLATT",
+        "STARKREGEN": "GUSS",
+        "SCHAUER": "REGEN",
+        "GEWITTER": "BLITZ",
+    },
+    "en": {
+        "OVERCAST": "GREY",
+        "DRIZZLE": "RAIN",
+        "ICY RAIN": "ICE",
+        "HEAVY RAIN": "POUR",
+        "SHOWERS": "SHOWER",
+        "THUNDER": "STORM",
+    },
+}
 
 WEEKDAYS = {
     "de": ("MO", "DI", "MI", "DO", "FR", "SA", "SO"),
@@ -430,13 +454,15 @@ def number(value: float | None, decimals: int = 0) -> str:
     return f"{value:.{decimals}f}"
 
 
-def condition_label(code: int | None, is_day: bool, language: str) -> str:
-    """The board word for a WMO code, "" for a code Open-Meteo never sends."""
+def condition_label(code: int | None, is_day: bool, language: str, *, short: bool = False) -> str:
+    """The board word for a WMO code, "" for a code Open-Meteo never sends.
+
+    *short* gives the six-tile form used when the full word does not fit.
+    """
     if code is None:
         return ""
-    if code == 0 and not is_day:
-        return CLEAR_NIGHT[language]
-    return CONDITIONS[language].get(code, "")
+    label = CLEAR_NIGHT[language] if code == 0 and not is_day else CONDITIONS[language].get(code, "")
+    return SHORT_CONDITIONS[language].get(label, label) if short else label
 
 
 def rate_day(code: int | None, rain: float | None, threshold: float) -> str:
@@ -583,7 +609,9 @@ class View:
     """Everything the layout needs, already turned into board text."""
 
     condition: str
+    condition_short: str
     temperature: str
+    humidity: str
     low: str
     high: str
     rain_chance: str
@@ -597,6 +625,23 @@ class View:
     wind_unit: str
 
 
+def now_row(view: View, width: int) -> list[str]:
+    """Condition, temperature and humidity: "BEWOELKT 12°C 71%".
+
+    The numbers always stay. When the full word leaves them no room it gives
+    way to its short form ("WOLKIG 12°C 71%" on a Note), and only if even that
+    is too long is the word cut.
+    """
+    temperature = f"{view.temperature}{view.unit}" if view.temperature else ""
+    humidity = f"{view.humidity}%" if view.humidity else ""
+    value = " ".join(part for part in (temperature, humidity) if part)
+    gap = 1 if value else 0
+    label = view.condition
+    if len(label) + gap + len(value) > width:
+        label = view.condition_short
+    return follow(label, value, width)
+
+
 def layout(view: View, width: int, height: int) -> list[str]:
     """Lay the weather out as *height* rows of *width* tiles.
 
@@ -605,8 +650,7 @@ def layout(view: View, width: int, height: int) -> list[str]:
     smaller gets the compact one — now, today's range, the week on one row —
     trimmed from the bottom on a board with fewer than three rows.
     """
-    now_value = f"{view.temperature}{view.unit}" if view.temperature else ""
-    now = follow(view.condition, now_value, width)
+    now = now_row(view, width)
     today = range_row(view.low, view.high, view.unit, width)
 
     if width >= WIDE_MIN_WIDTH and height >= WIDE_MIN_HEIGHT:
@@ -726,11 +770,14 @@ class WetterPlugin(PluginBase):
         words = WORDS[language]
         wind_unit = "MPH" if units == "imperial" else "KMH"
         condition = to_board_text(condition_label(forecast.code, forecast.is_day, language), umlauts)
+        condition_short = to_board_text(condition_label(forecast.code, forecast.is_day, language, short=True), umlauts)
         now_rating = rate_day(forecast.code, today.rain, threshold)
 
         view = View(
             condition=condition,
+            condition_short=condition_short,
             temperature=temperature(forecast.temperature),
+            humidity=_whole(forecast.humidity),
             low=temperature(today.low),
             high=temperature(today.high),
             rain_chance=_whole(today.rain_chance),
@@ -746,12 +793,13 @@ class WetterPlugin(PluginBase):
         data: dict[str, Any] = {
             "location": to_board_text(self.config.get("location_name") or "", umlauts),
             "condition": condition,
+            "condition_short": condition_short,
             "temp": view.temperature,
             "feels_like": temperature(forecast.feels_like),
             "temp_unit": unit,
             "low": view.low,
             "high": view.high,
-            "humidity": _whole(forecast.humidity),
+            "humidity": view.humidity,
             "wind": view.wind,
             "wind_unit": wind_unit,
             "rain_chance": view.rain_chance,

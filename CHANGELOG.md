@@ -9,6 +9,21 @@ the two drift apart.
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-10-24
+
+### Added
+
+- **Humidity** on the first row: `BEWOELKT 12°C 71%`. On a Note, where that
+  is two tiles too many, the condition switches to a short form of six tiles
+  or fewer (`WOLKIG 12°C 71%`) — the numbers always stay.
+- `{{wetter.condition_short}}`, the short form on its own.
+
+### Changed
+
+- Cloudy and foggy days are **white** instead of yellow. The board has no grey
+  tile; white is its most neutral one. *Color: cloudy or foggy* brings yellow
+  back.
+
 ## [1.1.0] — 2026-10-24
 
 ### Changed

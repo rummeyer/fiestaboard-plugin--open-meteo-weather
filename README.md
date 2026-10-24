@@ -1,11 +1,11 @@
 # Wetter Plugin
 
-The weather for any coordinates on a Vestaboard Note: what it is doing outside right now, today's low and high, and this week as one colored tile per day.
+The weather for any coordinates on a Vestaboard Note: what it is doing outside right now with temperature and humidity, today's low and high, and this week as one colored tile per day.
 
 ```
-BEWOELKT 12°C
+WOLKIG 12°C 71%
 🟦 7°C  🟥 14°C
-M🟥D🟩M🟨D🟥F🟩S🟨S🟩
+M🟥D🟩M⬜D🟥F🟩S⬜S🟩
 ```
 
 ## Overview
@@ -19,27 +19,29 @@ Each day of the week overview is rated and gets a color tile:
 | Tile | Rating | Weather |
 |------|--------|---------|
 | 🟩 green | good | sunny or mostly sunny (WMO 0–1) |
-| 🟨 yellow | mixed | cloudy, overcast or fog (WMO 2–3, 45, 48) — or a wet day with less precipitation than the **rain threshold** |
+| ⬜ white | mixed | cloudy, overcast or fog (WMO 2–3, 45, 48) — or a wet day with less precipitation than the **rain threshold** |
 | 🟥 red | bad | drizzle, rain, snow, showers or thunder (WMO 51 and up) |
 
-The rain threshold (default 1 mm) is there because Open-Meteo reports the most severe weather of the day: one drizzly hour at 6 a.m. makes a day "drizzle" with 0.1 mm to show for it. The three colors can be changed in the settings.
+The rain threshold (default 1 mm) is there because Open-Meteo reports the most severe weather of the day: one drizzly hour at 6 a.m. makes a day "drizzle" with 0.1 mm to show for it. The three colors can be changed in the settings. The board has no grey tile, so cloudy days are white by default; yellow is one setting away.
 
 ### On a Note (15×3)
 
 ```
-BEWOELKT 12°C        ← now: condition and temperature
+WOLKIG 12°C 71%      ← now: condition, temperature, humidity
 🟦 7°C  🟥 14°C        ← today's low (blue) and high (red)
-M🟥D🟩M🟨D🟥F🟩S🟨S🟩    ← the week, Monday to Sunday
+M🟥D🟩M⬜D🟥F🟩S⬜S🟩    ← the week, Monday to Sunday
 ```
+
+`BEWOELKT 12°C 71%` is 17 tiles, two more than a Note has. When the full word leaves no room for the numbers, the first row uses a short form of six tiles or fewer — `WOLKIG` for bewölkt, `TRUEB` for bedeckt, `GUSS` for Starkregen, `BLITZ` for Gewitter. Words that already fit, like `NEBEL` or `REGEN`, stay as they are; the Flagship always gets the full word.
 
 ### On a Flagship (22×6)
 
 ```
-BEWOELKT 12°C
+BEWOELKT 12°C 71%
 🟦 7°C  🟥 14°C
 REGEN 20%   WIND 14KMH
  MO DI MI DO FR SA SO
- 🟥🟥 🟩🟩 🟨🟨 🟥🟥 🟩🟩 🟨🟨 🟩🟩
+ 🟥🟥 🟩🟩 ⬜⬜ 🟥🟥 🟩🟩 ⬜⬜ 🟩🟩
  10 13 12 10 15 14 16
 ```
 
@@ -63,7 +65,7 @@ Tile 62 is a degree sign on a Flagship; some Notes carry a heart or a blank flap
 | Units | Metric | Imperial asks Open-Meteo for °F, mph and inches. |
 | Week overview | Calendar week | Monday–Sunday, or the next seven days from today or from tomorrow. |
 | Rain threshold (mm) | 1.0 | Wet days with less precipitation than this are yellow, not red. |
-| Colors | green / yellow / red | One per rating. |
+| Colors | green / white / red | One per rating. |
 | Degree sign | Always | Auto skips it on note-shaped boards. |
 | Umlauts | Expand | `BEWOELKT` or `BEWOLKT`. |
 | Refresh interval | 900 s | Minimum 300 s. Open-Meteo updates current conditions every 15 minutes. |
@@ -75,12 +77,13 @@ Tile 62 is a degree sign on a Flagship; some Notes carry a heart or a blank flap
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `{{wetter.condition}}` | Current condition | `BEWOELKT` |
+| `{{wetter.condition_short}}` | The same in six tiles or fewer | `WOLKIG` |
 | `{{wetter.temp}}` | Current temperature, whole degrees, no unit | `12` |
 | `{{wetter.feels_like}}` | Apparent temperature | `10` |
 | `{{wetter.temp_unit}}` | Unit suffix, `C` when the degree sign is off | `°C` |
 | `{{wetter.humidity}}` | Relative humidity in % | `71` |
 | `{{wetter.wind}}` / `{{wetter.wind_unit}}` | Wind speed and unit | `14` / `KMH` |
-| `{{wetter.color}}` | Today's color tile | `{65}` |
+| `{{wetter.color}}` | Today's color tile | `{69}` |
 | `{{wetter.location}}` | Location name from the settings | `BERLIN` |
 
 ### Today
@@ -95,8 +98,8 @@ Tile 62 is a degree sign on a Flagship; some Notes carry a heart or a blank flap
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `{{wetter.week}}` | Initial + tile per day, 14 tiles | `M{63}D{66}M{65}…` |
-| `{{wetter.week_tiles}}` | Just the seven tiles | `{63}{66}{65}…` |
+| `{{wetter.week}}` | Initial + tile per day, 14 tiles | `M{63}D{66}M{69}…` |
+| `{{wetter.week_tiles}}` | Just the seven tiles | `{63}{66}{69}…` |
 | `{{wetter.days.N.name}}` | Weekday, N = 0…6 (0 is Monday in a calendar week) | `MO` |
 | `{{wetter.days.N.condition}}` | The day's weather | `REGEN` |
 | `{{wetter.days.N.high}}` / `.low` | High and low | `12` / `7` |

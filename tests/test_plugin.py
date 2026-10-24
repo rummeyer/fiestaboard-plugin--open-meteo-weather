@@ -34,7 +34,7 @@ from .conftest import MANIFEST, TODAY, forecast_body
 FLAGSHIP = BoardContext.from_device_type("flagship")
 NOTE = BoardContext.from_device_type("note")
 
-GREEN, YELLOW, RED, BLUE = "{66}", "{65}", "{63}", "{67}"
+GREEN, YELLOW, RED, BLUE, WHITE = "{66}", "{65}", "{63}", "{67}", "{69}"
 
 
 def count_tiles(row: str) -> int:
@@ -260,6 +260,18 @@ class TestText:
         assert condition_label(0, False, "de") == "KLAR"
         assert condition_label(0, False, "en") == "CLEAR"
 
+    def test_every_short_label_fits_next_to_temperature_and_humidity_on_a_note(self):
+        """15 tiles minus " 12°C 71%" leave six for the word."""
+        for language, labels in wetter.CONDITIONS.items():
+            for code in labels:
+                for is_day in (True, False):
+                    short = to_board_text(condition_label(code, is_day, language, short=True))
+                    assert len(short) <= 6, f"{language} {code} {short}"
+
+    def test_short_labels_fall_back_to_the_full_word(self):
+        assert condition_label(45, True, "de", short=True) == "NEBEL"
+        assert condition_label(2, True, "de", short=True) == "WOLKIG"
+
     def test_an_unknown_or_missing_code_has_no_label(self):
         assert condition_label(None, True, "de") == ""
         assert condition_label(42, True, "de") == ""
@@ -339,7 +351,9 @@ class TestLayoutPieces:
 def view(**overrides):
     defaults = {
         "condition": "BEWOELKT",
+        "condition_short": "WOLKIG",
         "temperature": "12",
+        "humidity": "",
         "low": "7",
         "high": "14",
         "rain_chance": "20",
@@ -367,8 +381,26 @@ class TestLayout:
         assert rows[1] == f"{BLUE} 7°C  {RED} 14°C  "
         assert rows[2].startswith(f"S{YELLOW}S{GREEN}M{RED}")
 
-    def test_a_long_condition_is_shortened_before_the_temperature(self):
-        assert layout(view(condition="STARKREGEN", temperature="-12"), 15, 3)[0] == "STARKREGE -12°C"
+    def test_a_long_condition_gives_way_to_its_short_form(self):
+        assert layout(view(condition="STARKREGEN", condition_short="GUSS", temperature="-12"), 15, 3)[0] == (
+            "GUSS -12°C     "
+        )
+
+    def test_the_first_row_carries_the_humidity(self):
+        assert layout(view(humidity="71"), 22, 6)[0] == "BEWOELKT 12°C 71%     "
+
+    def test_on_a_note_the_humidity_fits_by_using_the_short_word(self):
+        assert layout(view(humidity="71"), 15, 3)[0] == "WOLKIG 12°C 71%"
+
+    def test_the_full_word_stays_when_it_fits_on_a_note(self):
+        assert layout(view(condition="NEBEL", condition_short="NEBEL", humidity="98"), 15, 3)[0] == "NEBEL 12°C 98% "
+
+    def test_the_short_word_is_cut_only_when_even_it_does_not_fit(self):
+        row = layout(view(condition_short="WOLKIG", temperature="-12", humidity="100"), 15, 3)[0]
+        assert row == "WOLK -12°C 100%"
+
+    def test_missing_humidity_leaves_the_temperature_alone(self):
+        assert layout(view(), 15, 3)[0] == "BEWOELKT 12°C  "
 
     def test_a_flagship_gets_bars_with_the_highs_underneath(self):
         rows = layout(view(), 22, 6)
@@ -400,19 +432,22 @@ class TestPlugin:
 
     def test_the_note_preview(self, make_plugin):
         rows = make_plugin().get_data(NOTE).formatted_lines
-        assert rows[0] == "BEWOELKT 12°C  "
+        assert rows[0] == "WOLKIG 12°C 71%"
         assert rows[1] == f"{BLUE} 7°C  {RED} 14°C  "
-        assert rows[2] == f"M{RED}D{GREEN}M{YELLOW}D{RED}F{GREEN}S{YELLOW}S{GREEN} "
+        assert rows[2] == f"M{RED}D{GREEN}M{WHITE}D{RED}F{GREEN}S{WHITE}S{GREEN} "
+
+    def test_the_flagship_has_room_for_the_full_word(self, make_plugin):
+        assert make_plugin().get_data(FLAGSHIP).formatted_lines[0] == "BEWOELKT 12°C 71%     "
 
     def test_the_week_starts_on_monday_by_default(self, make_plugin, calls):
         data = make_plugin().get_data(NOTE).data
         assert calls[-1]["past_days"] == 6
         assert [day["name"] for day in data["days"]] == ["MO", "DI", "MI", "DO", "FR", "SA", "SO"]
         # Today's range and rating are still Saturday's.
-        assert (data["low"], data["high"], data["color"]) == ("7", "14", YELLOW)
+        assert (data["low"], data["high"], data["color"]) == ("7", "14", WHITE)
 
     def test_the_degree_sign_can_be_left_off(self, make_plugin):
-        assert make_plugin(degree_sign="auto").get_data(NOTE).formatted_lines[0] == "BEWOELKT 12C   "
+        assert make_plugin(degree_sign="auto").get_data(NOTE).formatted_lines[0] == "WOLKIG 12C 71% "
         assert make_plugin(degree_sign="auto").get_data(FLAGSHIP).data["temp_unit"] == "°C"
 
     def test_too_few_days_back_makes_the_plugin_unavailable(self, make_plugin, monkeypatch):
@@ -424,7 +459,7 @@ class TestPlugin:
     def test_the_week_can_start_today(self, make_plugin, calls):
         rows = make_plugin(week_start="today").get_data(NOTE).formatted_lines
         assert "past_days" not in calls[-1]
-        assert rows[2] == f"S{YELLOW}S{GREEN}M{RED}D{YELLOW}M{GREEN}D{YELLOW}F{RED} "
+        assert rows[2] == f"S{WHITE}S{GREEN}M{RED}D{WHITE}M{GREEN}D{WHITE}F{RED} "
 
     def test_the_week_can_start_tomorrow(self, make_plugin, calls):
         result = make_plugin(week_start="tomorrow").get_data(NOTE)
@@ -449,7 +484,11 @@ class TestPlugin:
 
     def test_custom_colors_replace_the_defaults(self, make_plugin):
         data = make_plugin(color_good="blue", color_bad="violet", week_start="today").get_data(NOTE).data
-        assert data["week_tiles"] == "{65}{67}{68}{65}{67}{65}{68}"
+        assert data["week_tiles"] == "{69}{67}{68}{69}{67}{69}{68}"
+
+    def test_grey_days_can_be_yellow_again(self, make_plugin):
+        data = make_plugin(color_mixed="yellow", week_start="today").get_data(NOTE).data
+        assert data["days"][0]["color"] == YELLOW
 
     def test_an_unknown_color_falls_back_to_the_default(self, make_plugin):
         data = make_plugin(color_good="pink", week_start="today").get_data(NOTE).data
@@ -470,8 +509,9 @@ class TestPlugin:
         data = make_plugin(location_name="Köln", week_start="today").get_data(FLAGSHIP).data
         assert data["location"] == "KOELN"
         assert (data["temp"], data["feels_like"], data["humidity"], data["wind"]) == ("12", "10", "71", "14")
-        assert (data["rain_chance"], data["rain"], data["color"]) == ("20", "0.0", YELLOW)
-        assert data["week"] == f"S{YELLOW}S{GREEN}M{RED}D{YELLOW}M{GREEN}D{YELLOW}F{RED}"
+        assert (data["rain_chance"], data["rain"], data["color"]) == ("20", "0.0", WHITE)
+        assert (data["condition"], data["condition_short"]) == ("BEWOELKT", "WOLKIG")
+        assert data["week"] == f"S{WHITE}S{GREEN}M{RED}D{WHITE}M{GREEN}D{WHITE}F{RED}"
         assert data["block"].split("\n") == [data[f"line{i}"] for i in range(1, 7)]
 
     def test_a_note_leaves_lines_four_to_six_empty(self, make_plugin):

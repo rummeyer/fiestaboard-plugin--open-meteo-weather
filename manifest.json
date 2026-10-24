@@ -1,7 +1,7 @@
 {
   "id": "wetter",
   "name": "Wetter",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Current weather and a colored week overview for any coordinates — condition, temperature, today's low and high, and one green, yellow or red tile per day. Built for the Note, adapts to the Flagship. Forecasts from Open-Meteo, no API key needed.",
   "author": "Oliver Rummeyer",
   "repository": "https://github.com/rummeyer/fiestaboard-plugin--wetter",
@@ -107,24 +107,24 @@
         "type": "string",
         "title": "Color: cloudy or foggy",
         "enum": [
+          "white",
           "yellow",
           "orange",
-          "white",
           "green",
           "blue",
           "red",
           "violet"
         ],
         "enumNames": [
+          "White (the board has no grey)",
           "Yellow",
           "Orange",
-          "White",
           "Green",
           "Blue",
           "Red",
           "Violet"
         ],
-        "default": "yellow"
+        "default": "white"
       },
       "color_bad": {
         "type": "string",
@@ -219,6 +219,13 @@
         "group": "now",
         "example": "BEWOELKT"
       },
+      "condition_short": {
+        "description": "Current condition in six tiles or fewer — what the first row falls back to on a Note",
+        "type": "string",
+        "max_length": 6,
+        "group": "now",
+        "example": "WOLKIG"
+      },
       "temp": {
         "description": "Current temperature in whole degrees, no unit",
         "type": "string",
@@ -266,7 +273,7 @@
         "type": "string",
         "max_length": 4,
         "group": "now",
-        "example": "{65}"
+        "example": "{69}"
       },
       "low": {
         "description": "Today's low, no unit",
@@ -301,28 +308,28 @@
         "type": "string",
         "max_length": 28,
         "group": "week",
-        "example": "{63}{66}{65}{63}{66}{65}{66}"
+        "example": "{63}{66}{69}{63}{66}{69}{66}"
       },
       "week": {
         "description": "Weekday initial plus color tile for each day — 14 tiles, fits a Note row",
         "type": "string",
         "max_length": 35,
         "group": "week",
-        "example": "M{63}D{66}M{65}D{63}F{66}S{65}S{66}"
+        "example": "M{63}D{66}M{69}D{63}F{66}S{69}S{66}"
       },
       "block": {
         "description": "The whole laid-out board as one value, rows separated by newlines. Put this on the first template line to fill the board.",
         "type": "string",
         "max_length": 400,
         "group": "layout",
-        "example": "BEWOELKT 12°C  \\n{67} 7°C  {63} 14°C  \\nM{63}D{66}M{65}D{63}F{66}S{65}S{66} "
+        "example": "WOLKIG 12°C 71%\\n{67} 7°C  {63} 14°C  \\nM{63}D{66}M{69}D{63}F{66}S{69}S{66} "
       },
       "line1": {
-        "description": "Board row 1 of the layout: condition and temperature",
+        "description": "Board row 1 of the layout: condition, temperature and humidity",
         "type": "string",
         "max_length": 60,
         "group": "layout",
-        "example": "BEWOELKT 12°C  "
+        "example": "WOLKIG 12°C 71%"
       },
       "line2": {
         "description": "Board row 2 of the layout: today's low after a blue tile, the high after a red one",
@@ -336,7 +343,7 @@
         "type": "string",
         "max_length": 100,
         "group": "layout",
-        "example": "M{63}D{66}M{65}D{63}F{66}S{65}S{66} "
+        "example": "M{63}D{66}M{69}D{63}F{66}S{69}S{66} "
       },
       "line4": {
         "description": "Board row 4: weekday names on a Flagship, empty on a Note",
@@ -350,7 +357,7 @@
         "type": "string",
         "max_length": 100,
         "group": "layout",
-        "example": " {63}{63} {66}{66} {65}{65} {63}{63} {66}{66} {65}{65} {66}{66} "
+        "example": " {63}{63} {66}{66} {69}{69} {63}{63} {66}{66} {69}{69} {66}{66} "
       },
       "line6": {
         "description": "Board row 6: each day's high on a Flagship, empty on a Note",
@@ -434,6 +441,7 @@
   "max_lengths": {
     "location": 22,
     "condition": 10,
+    "condition_short": 6,
     "temp": 4,
     "feels_like": 4,
     "temp_unit": 2,
@@ -478,24 +486,24 @@
       }
     ]
   },
-  "teaser": "BEWOELKT 12°C  ",
+  "teaser": "WOLKIG 12°C 71%",
   "previews": [
     {
       "device_type": "note",
       "rows": [
-        "BEWOELKT 12°C  ",
+        "WOLKIG 12°C 71%",
         "{67} 7°C  {63} 14°C  ",
-        "M{63}D{66}M{65}D{63}F{66}S{65}S{66} "
+        "M{63}D{66}M{69}D{63}F{66}S{69}S{66} "
       ]
     },
     {
       "device_type": "flagship",
       "rows": [
-        "BEWOELKT 12°C         ",
+        "BEWOELKT 12°C 71%     ",
         "{67} 7°C  {63} 14°C         ",
         "REGEN 20%   WIND 14KMH",
         " MO DI MI DO FR SA SO ",
-        " {63}{63} {66}{66} {65}{65} {63}{63} {66}{66} {65}{65} {66}{66} ",
+        " {63}{63} {66}{66} {69}{69} {63}{63} {66}{66} {69}{69} {66}{66} ",
         " 10 13 12 10 15 14 16 "
       ]
     }
