@@ -47,6 +47,16 @@ WIDE_MIN_HEIGHT = 6
 
 WEEK_DAYS = 7
 
+# Where the week overview starts. "monday" is the calendar week, Monday to
+# Sunday, with the days already past filled in from Open-Meteo's own record of
+# them (``past_days``); "today" and "tomorrow" are rolling seven-day windows.
+WEEK_STARTS = ("monday", "today", "tomorrow")
+DEFAULT_WEEK_START = "monday"
+# Six past days cover every Monday this week could have started on. The
+# location's weekday is only known once Open-Meteo has answered with its
+# timezone, so the window is cut afterwards, in `week_window`.
+PAST_DAYS = WEEK_DAYS - 1
+
 # Characters the board can flap. Anything else is dropped rather than sent as a
 # wrong tile. Reference: src/board_chars.py in FiestaBoard.
 BOARD_CHARSET = set("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !@#$()-+&=;:'\"%,./?°")
@@ -73,8 +83,8 @@ LANGUAGES = ("de", "en")
 DEFAULT_LANGUAGE = "de"
 UNITS = ("metric", "imperial")
 DEFAULT_UNITS = "metric"
-DEGREE_CHOICES = ("auto", "on", "off")
-DEFAULT_DEGREE = "auto"
+DEGREE_CHOICES = ("on", "auto", "off")
+DEFAULT_DEGREE = "on"
 
 # What a day is rated as, and the color each rating gets unless the user picks
 # another one.
@@ -82,6 +92,10 @@ GOOD = "good"
 MIXED = "mixed"
 BAD = "bad"
 DEFAULT_COLORS = {GOOD: "green", MIXED: "yellow", BAD: "red"}
+
+# Today's low and high are marked cold and hot instead of being labelled.
+COLD_TILE = COLOR_TILES["blue"]
+HOT_TILE = COLOR_TILES["red"]
 
 # Below this much precipitation a "rain" day is rated grey, not wet. Open-Meteo
 # reports the most severe code of the day, so a single drizzle hour at 6am
@@ -165,8 +179,8 @@ WEEKDAYS = {
 }
 
 WORDS = {
-    "de": {"low": "MIN", "high": "MAX", "rain": "REGEN", "wind": "WIND"},
-    "en": {"low": "LOW", "high": "HIGH", "rain": "RAIN", "wind": "WIND"},
+    "de": {"rain": "REGEN", "wind": "WIND"},
+    "en": {"rain": "RAIN", "wind": "WIND"},
 }
 
 
@@ -188,7 +202,11 @@ class Day:
 
 @dataclass(frozen=True)
 class Forecast:
-    """Current conditions plus the daily forecast, today first."""
+    """Current conditions plus the daily series, oldest day first.
+
+    The series starts with whatever past days were asked for; today sits at
+    that index (see `days_requested`).
+    """
 
     temperature: float | None = None
     feels_like: float | None = None
@@ -236,23 +254,50 @@ def _choice(value: Any, choices: tuple[str, ...], default: str) -> str:
 # --------------------------------------------------------------------------
 
 
-def request_params(latitude: float, longitude: float, units: str, days: int) -> dict[str, Any]:
+def request_params(latitude: float, longitude: float, units: str, week_start: str) -> dict[str, Any]:
     """Query string for one forecast call.
 
     Open-Meteo converts units itself, so imperial is asked for rather than
     computed here.
     """
+    past, ahead = days_requested(week_start)
     params: dict[str, Any] = {
         "latitude": round(latitude, 4),
         "longitude": round(longitude, 4),
         "current": "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m",
         "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max",
         "timezone": "auto",
-        "forecast_days": days,
+        "forecast_days": ahead,
     }
+    if past:
+        params["past_days"] = past
     if units == "imperial":
         params.update(temperature_unit="fahrenheit", wind_speed_unit="mph", precipitation_unit="inch")
     return params
+
+
+def days_requested(week_start: str) -> tuple[int, int]:
+    """(past days, forecast days) a week start needs. Today counts as a forecast day."""
+    if week_start == "monday":
+        return PAST_DAYS, WEEK_DAYS
+    if week_start == "tomorrow":
+        return 0, WEEK_DAYS + 1
+    return 0, WEEK_DAYS
+
+
+def week_window(days: list[Day], today_index: int, week_start: str) -> list[Day]:
+    """The seven days the overview shows, cut from what Open-Meteo returned.
+
+    *today_index* is where today sits in *days* — the number of past days that
+    were asked for. A Monday week reaches back ``weekday()`` days from there.
+    """
+    if week_start == "monday":
+        start = today_index - days[today_index].day.weekday()
+    elif week_start == "tomorrow":
+        start = today_index + 1
+    else:
+        start = today_index
+    return days[max(start, 0) :][:WEEK_DAYS]
 
 
 def _at(values: Any, index: int) -> Any:
@@ -433,6 +478,21 @@ def fit(row: list[str], width: int, alignment: str = "left") -> list[str]:
     return row + [" "] * padding
 
 
+def follow(text: str, value: str, width: int) -> list[str]:
+    """*value* right after *text*, left-aligned: "BEWOELKT 12C".
+
+    Only the text is shortened when the row is too narrow for both.
+    """
+    if not value:
+        return fit(tiles(text), width)
+    if not text:
+        return fit(tiles(value), width)
+    room = max(width - len(value) - 1, 0)
+    if not room:
+        return fit(tiles(value), width)
+    return fit(tiles(text[:room]) + [" "] + tiles(value), width)
+
+
 def compose(left: str, right: str, width: int) -> list[str]:
     """Left text and right text on one row, the left one shortened first.
 
@@ -446,21 +506,23 @@ def compose(left: str, right: str, width: int) -> list[str]:
     return tiles(left[:room].ljust(room)) + [" "] + tiles(right)
 
 
-def range_text(low: str, high: str, sign: str, words: dict[str, str], width: int) -> str:
-    """Today's low and high, as wordy as the row allows.
+def range_row(low: str, high: str, unit: str, width: int) -> list[str]:
+    """Today's low after a blue tile and the high after a red one.
 
-    "MIN 7  MAX 12" when it fits, a single space between the halves when that
-    is what fits, and a bare "7/12" on a board narrower than that.
+    ``■ 7°C  ■ 14°C`` when it fits, then without the space after each tile,
+    then with no gap at all — the colors keep the two apart either way.
     """
-    if not (low or high):
-        return ""
-    low_part = f"{words['low']} {low}{sign}" if low else ""
-    high_part = f"{words['high']} {high}{sign}" if high else ""
-    for gap in ("  ", " "):
-        text = gap.join(part for part in (low_part, high_part) if part)
-        if len(text) <= width:
-            return text
-    return f"{low}/{high}{sign}"
+    parts = [(tile, f"{value}{unit}") for tile, value in ((COLD_TILE, low), (HOT_TILE, high)) if value]
+    row: list[str] = []
+    for inner, gap in ((" ", "  "), ("", " "), ("", "")):
+        row = []
+        for index, (tile, text) in enumerate(parts):
+            if index:
+                row += tiles(gap)
+            row += [tile, *tiles(inner), *tiles(text)]
+        if len(row) <= width:
+            break
+    return fit(row, width)
 
 
 def week_row(names: list[str], marks: list[str], width: int) -> list[str]:
@@ -529,7 +591,8 @@ class View:
     names: list[str]
     marks: list[str]
     highs: list[str]
-    sign: str
+    # Temperature suffix: "°C" on a Flagship, "C" where the degree sign is off.
+    unit: str
     words: dict[str, str]
     wind_unit: str
 
@@ -542,9 +605,9 @@ def layout(view: View, width: int, height: int) -> list[str]:
     smaller gets the compact one — now, today's range, the week on one row —
     trimmed from the bottom on a board with fewer than three rows.
     """
-    now_value = f"{view.temperature}{view.sign}" if view.temperature else ""
-    now = compose(view.condition, now_value, width)
-    today = fit(tiles(range_text(view.low, view.high, view.sign, view.words, width)), width)
+    now_value = f"{view.temperature}{view.unit}" if view.temperature else ""
+    now = follow(view.condition, now_value, width)
+    today = range_row(view.low, view.high, view.unit, width)
 
     if width >= WIDE_MIN_WIDTH and height >= WIDE_MIN_HEIGHT:
         rain = f"{view.words['rain']} {view.rain_chance}%" if view.rain_chance else ""
@@ -587,12 +650,12 @@ class WetterPlugin(PluginBase):
         clear_shared_cache()
         self.clear_cache()
 
-    def _options(self) -> tuple[str, str, bool]:
-        """Language, units and whether the week starts today, clamped to what the code handles."""
+    def _options(self) -> tuple[str, str, str]:
+        """Language, units and week start, clamped to what the code handles."""
         language = _choice(self.config.get("language"), LANGUAGES, DEFAULT_LANGUAGE)
         units = _choice(self.config.get("units"), UNITS, DEFAULT_UNITS)
-        include_today = bool(self.config.get("include_today", True))
-        return language, units, include_today
+        week_start = _choice(self.config.get("week_start"), WEEK_STARTS, DEFAULT_WEEK_START)
+        return language, units, week_start
 
     def fetch_data(self) -> PluginResult:
         """Ask Open-Meteo for the configured location and lay it out for this board."""
@@ -600,10 +663,12 @@ class WetterPlugin(PluginBase):
         if coordinates is None:
             return PluginResult(available=False, error="Coordinates are not configured")
 
-        language, units, include_today = self._options()
-        days = WEEK_DAYS if include_today else WEEK_DAYS + 1
+        language, units, week_start = self._options()
+        today_index, _ = days_requested(week_start)
         try:
-            forecast = parse_forecast(fetch_forecast_body(request_params(*coordinates, units, days)))
+            forecast = parse_forecast(fetch_forecast_body(request_params(*coordinates, units, week_start)))
+            if today_index >= len(forecast.days):
+                raise WetterError("Open-Meteo returned fewer days than were asked for")
         except WetterError as error:
             logger.warning("Open-Meteo fetch failed: %s", error)
             return PluginResult(available=False, error=str(error))
@@ -611,7 +676,7 @@ class WetterPlugin(PluginBase):
             logger.exception("Unexpected error reading the Open-Meteo forecast")
             return PluginResult(available=False, error=str(error))
 
-        view, data = self._build(forecast, language, units, include_today)
+        view, data = self._build(forecast, language, units, week_start, today_index)
         board = self.board
         width = board.width if board else FALLBACK_WIDTH
         height = board.height if board else FALLBACK_HEIGHT
@@ -629,12 +694,15 @@ class WetterPlugin(PluginBase):
 
         return PluginResult(available=True, data=data, formatted_lines=lines)
 
-    def _build(self, forecast: Forecast, language: str, units: str, include_today: bool) -> tuple[View, dict[str, Any]]:
+    def _build(
+        self, forecast: Forecast, language: str, units: str, week_start: str, today_index: int
+    ) -> tuple[View, dict[str, Any]]:
         """The layout's input and the template variables, from one forecast."""
         umlauts = "strip" if self.config.get("umlauts") == "strip" else "expand"
         degree = _choice(self.config.get("degree_sign"), DEGREE_CHOICES, DEFAULT_DEGREE)
         board = self.board
         sign = degree_sign(degree, board.device_type if board else "flagship")
+        unit = f"{sign}{'F' if units == 'imperial' else 'C'}"
 
         threshold = self.config.get("rain_threshold", DEFAULT_RAIN_THRESHOLD_MM)
         if not isinstance(threshold, int | float) or threshold < 0:
@@ -648,8 +716,8 @@ class WetterPlugin(PluginBase):
             for rating, default in DEFAULT_COLORS.items()
         }
 
-        today = forecast.days[0]
-        week = forecast.days[0 if include_today else 1 :][:WEEK_DAYS]
+        today = forecast.days[today_index]
+        week = week_window(forecast.days, today_index, week_start)
         ratings = [rate_day(day.code, day.rain, threshold) for day in week]
         names = [WEEKDAYS[language][day.day.weekday()] for day in week]
         marks = [colors[rating] for rating in ratings]
@@ -670,7 +738,7 @@ class WetterPlugin(PluginBase):
             names=names,
             marks=marks,
             highs=highs,
-            sign=sign,
+            unit=unit,
             words=words,
             wind_unit=wind_unit,
         )
@@ -680,7 +748,7 @@ class WetterPlugin(PluginBase):
             "condition": condition,
             "temp": view.temperature,
             "feels_like": temperature(forecast.feels_like),
-            "temp_unit": f"{sign}{'F' if units == 'imperial' else 'C'}",
+            "temp_unit": unit,
             "low": view.low,
             "high": view.high,
             "humidity": _whole(forecast.humidity),

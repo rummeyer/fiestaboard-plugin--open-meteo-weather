@@ -19,21 +19,22 @@ from plugins.wetter import (
     layout,
     parse_coordinates,
     parse_forecast,
-    range_text,
+    range_row,
     rate_day,
     request_params,
     temperature,
     to_board_text,
     week_columns,
     week_row,
+    week_window,
 )
 
-from .conftest import MANIFEST, forecast_body
+from .conftest import MANIFEST, TODAY, forecast_body
 
 FLAGSHIP = BoardContext.from_device_type("flagship")
 NOTE = BoardContext.from_device_type("note")
 
-GREEN, YELLOW, RED = "{66}", "{65}", "{63}"
+GREEN, YELLOW, RED, BLUE = "{66}", "{65}", "{63}", "{67}"
 
 
 def count_tiles(row: str) -> int:
@@ -73,29 +74,38 @@ class TestCoordinates:
 
 class TestOpenMeteo:
     def test_the_query_asks_for_the_locations_own_timezone(self):
-        params = request_params(52.52, 13.405, "metric", 7)
+        params = request_params(52.52, 13.405, "metric", "today")
         assert params["timezone"] == "auto"
         assert params["forecast_days"] == 7
+        assert "past_days" not in params
         assert "temperature_unit" not in params
 
+    def test_a_calendar_week_asks_for_the_days_behind_it(self):
+        params = request_params(52.52, 13.405, "metric", "monday")
+        assert (params["past_days"], params["forecast_days"]) == (6, 7)
+
+    def test_a_week_from_tomorrow_asks_for_one_day_more(self):
+        assert request_params(52.52, 13.405, "metric", "tomorrow")["forecast_days"] == 8
+
     def test_imperial_is_converted_by_open_meteo(self):
-        params = request_params(52.52, 13.405, "imperial", 7)
+        params = request_params(52.52, 13.405, "imperial", "today")
         assert params["temperature_unit"] == "fahrenheit"
         assert params["wind_speed_unit"] == "mph"
         assert params["precipitation_unit"] == "inch"
 
     def test_coordinates_are_rounded_so_boards_share_a_cache_key(self):
-        params = request_params(52.520001, 13.4049999, "metric", 7)
+        params = request_params(52.520001, 13.4049999, "metric", "today")
         assert (params["latitude"], params["longitude"]) == (52.52, 13.405)
 
-    def test_the_forecast_is_parsed_today_first(self):
+    def test_the_forecast_is_parsed_oldest_day_first(self):
         forecast = parse_forecast(forecast_body())
         assert forecast.temperature == 12.4
         assert forecast.code == 2
         assert forecast.is_day
-        assert [day.day.isoformat() for day in forecast.days[:2]] == ["2026-10-24", "2026-10-25"]
-        assert forecast.days[2].code == 61
-        assert forecast.days[2].rain == 5.2
+        assert forecast.days[0].day.isoformat() == "2026-10-18"
+        assert forecast.days[TODAY].day.isoformat() == "2026-10-24"
+        assert forecast.days[TODAY + 2].code == 61
+        assert forecast.days[TODAY + 2].rain == 5.2
 
     def test_a_null_value_stays_empty_rather_than_becoming_zero(self):
         body = forecast_body()
@@ -111,7 +121,7 @@ class TestOpenMeteo:
         del body["current"]
         forecast = parse_forecast(body)
         assert forecast.temperature is None
-        assert len(forecast.days) == 8
+        assert len(forecast.days) == 14
 
     def test_no_daily_forecast_is_an_error(self):
         with pytest.raises(WetterError):
@@ -139,15 +149,15 @@ class TestHttp:
             return FakeResponse(payload=forecast_body())
 
         monkeypatch.setattr(requests, "get", fake_get)
-        params = request_params(52.52, 13.405, "metric", 7)
+        params = request_params(52.52, 13.405, "metric", "today")
         assert fetch_forecast_body(params) == fetch_forecast_body(params)
         assert len(sent) == 1
 
     def test_a_different_location_is_a_different_call(self, monkeypatch):
         sent = []
         monkeypatch.setattr(requests, "get", lambda url, params, timeout: sent.append(1) or FakeResponse(payload={}))
-        fetch_forecast_body(request_params(52.52, 13.405, "metric", 7))
-        fetch_forecast_body(request_params(48.14, 11.58, "metric", 7))
+        fetch_forecast_body(request_params(52.52, 13.405, "metric", "today"))
+        fetch_forecast_body(request_params(48.14, 11.58, "metric", "today"))
         assert len(sent) == 2
 
     def test_the_shared_answer_expires(self, monkeypatch):
@@ -156,7 +166,7 @@ class TestHttp:
         clock = iter([0.0, 500.0, 500.0])
         monkeypatch.setattr(wetter.time, "monotonic", lambda: next(clock))
         monkeypatch.setattr(requests, "get", lambda url, params, timeout: sent.append(1) or FakeResponse(payload={}))
-        params = request_params(52.52, 13.405, "metric", 7)
+        params = request_params(52.52, 13.405, "metric", "today")
         fetch_forecast_body(params)
         fetch_forecast_body(params)
         assert len(sent) == 2
@@ -167,31 +177,54 @@ class TestHttp:
 
         monkeypatch.setattr(requests, "get", fail)
         with pytest.raises(WetterError, match="unreachable"):
-            fetch_forecast_body(request_params(52.52, 13.405, "metric", 7))
+            fetch_forecast_body(request_params(52.52, 13.405, "metric", "today"))
 
     def test_open_meteos_own_reason_is_passed_on(self, monkeypatch):
         payload = {"error": True, "reason": "Latitude must be in range of -90 to 90°."}
         monkeypatch.setattr(requests, "get", lambda url, params, timeout: FakeResponse(400, payload))
         with pytest.raises(WetterError, match="Latitude must be"):
-            fetch_forecast_body(request_params(52.52, 13.405, "metric", 7))
+            fetch_forecast_body(request_params(52.52, 13.405, "metric", "today"))
 
     def test_a_server_error_without_a_reason_names_the_status(self, monkeypatch):
         monkeypatch.setattr(requests, "get", lambda url, params, timeout: FakeResponse(502, []))
         with pytest.raises(WetterError, match="HTTP 502"):
-            fetch_forecast_body(request_params(52.52, 13.405, "metric", 7))
+            fetch_forecast_body(request_params(52.52, 13.405, "metric", "today"))
 
     def test_a_non_json_answer_is_reported(self, monkeypatch):
         monkeypatch.setattr(requests, "get", lambda url, params, timeout: FakeResponse(503, raw=True))
         with pytest.raises(WetterError, match="without JSON"):
-            fetch_forecast_body(request_params(52.52, 13.405, "metric", 7))
+            fetch_forecast_body(request_params(52.52, 13.405, "metric", "today"))
 
     def test_a_failed_call_is_not_cached(self, monkeypatch):
         answers = iter([FakeResponse(502, {}), FakeResponse(payload=forecast_body())])
         monkeypatch.setattr(requests, "get", lambda url, params, timeout: next(answers))
-        params = request_params(52.52, 13.405, "metric", 7)
+        params = request_params(52.52, 13.405, "metric", "today")
         with pytest.raises(WetterError):
             fetch_forecast_body(params)
         assert fetch_forecast_body(params)["daily"]
+
+
+class TestWeekWindow:
+    @pytest.fixture
+    def days(self):
+        return parse_forecast(forecast_body()).days
+
+    def test_a_calendar_week_runs_monday_to_sunday_around_today(self, days):
+        week = week_window(days, TODAY, "monday")
+        assert [day.day.isoformat() for day in (week[0], week[-1])] == ["2026-10-19", "2026-10-25"]
+
+    def test_on_a_monday_the_calendar_week_starts_today(self, days):
+        monday = TODAY + 2
+        assert week_window(days, monday, "monday")[0].day.isoformat() == "2026-10-26"
+
+    def test_on_a_sunday_the_calendar_week_is_six_days_back(self, days):
+        sunday = TODAY + 1
+        assert week_window(days, sunday, "monday")[0].day.isoformat() == "2026-10-19"
+
+    def test_rolling_windows_start_today_or_tomorrow(self, days):
+        assert week_window(days, TODAY, "today")[0].day.isoformat() == "2026-10-24"
+        assert week_window(days, TODAY, "tomorrow")[0].day.isoformat() == "2026-10-25"
+        assert len(week_window(days, TODAY, "tomorrow")) == 7
 
 
 class TestText:
@@ -271,15 +304,17 @@ class TestLayoutPieces:
     def test_compose_on_a_board_too_narrow_for_both_keeps_the_value(self):
         assert "".join(compose("NEBEL", "12", 2)) == "12"
 
-    def test_range_text_drops_detail_as_the_row_narrows(self):
-        words = wetter.WORDS["de"]
-        assert range_text("-12", "-3", "°", words, 22) == "MIN -12°  MAX -3°"
-        assert range_text("-12", "-3", "", words, 14) == "MIN -12 MAX -3"
-        assert range_text("-12", "-3", "", words, 10) == "-12/-3"
+    def test_today_is_a_blue_low_and_a_red_high(self):
+        assert "".join(range_row("7", "14", "°C", 15)) == f"{BLUE} 7°C  {RED} 14°C  "
 
-    def test_range_text_with_one_side_missing(self):
-        assert range_text("", "14", "", wetter.WORDS["en"], 15) == "HIGH 14"
-        assert range_text("", "", "", wetter.WORDS["en"], 15) == ""
+    def test_the_range_drops_spacing_as_the_row_narrows(self):
+        assert "".join(range_row("-12", "-3", "°C", 15)) == f"{BLUE} -12°C  {RED} -3°C"
+        assert "".join(range_row("-12", "-3", "°C", 12)) == f"{BLUE}-12°C {RED}-3°C"
+        assert "".join(range_row("-12", "-3", "°C", 11)) == f"{BLUE}-12°C{RED}-3°C"
+
+    def test_the_range_with_one_side_missing(self):
+        assert "".join(range_row("", "14", "°C", 8)) == f"{RED} 14°C  "
+        assert "".join(range_row("", "", "°C", 3)) == "   "
 
     def test_week_row_uses_the_richest_form_that_fits(self):
         names = ["SA", "SO", "MO", "DI", "MI", "DO", "FR"]
@@ -312,7 +347,7 @@ def view(**overrides):
         "names": ["SA", "SO", "MO", "DI", "MI", "DO", "FR"],
         "marks": [YELLOW, GREEN, RED, YELLOW, GREEN, YELLOW, RED],
         "highs": ["14", "16", "12", "13", "15", "14", "10"],
-        "sign": "",
+        "unit": "°C",
         "words": wetter.WORDS["de"],
         "wind_unit": "KMH",
     }
@@ -328,12 +363,15 @@ class TestLayout:
 
     def test_a_note_gets_now_today_and_the_week(self):
         rows = layout(view(), 15, 3)
-        assert rows[0] == "BEWOELKT     12"
-        assert rows[1] == "MIN 7  MAX 14  "
+        assert rows[0] == "BEWOELKT 12°C  "
+        assert rows[1] == f"{BLUE} 7°C  {RED} 14°C  "
         assert rows[2].startswith(f"S{YELLOW}S{GREEN}M{RED}")
 
+    def test_a_long_condition_is_shortened_before_the_temperature(self):
+        assert layout(view(condition="STARKREGEN", temperature="-12"), 15, 3)[0] == "STARKREGE -12°C"
+
     def test_a_flagship_gets_bars_with_the_highs_underneath(self):
-        rows = layout(view(sign="°"), 22, 6)
+        rows = layout(view(), 22, 6)
         assert rows[2] == "REGEN 20%   WIND 14KMH"
         assert rows[3] == " SA SO MO DI MI DO FR "
         assert rows[5] == " 14 16 12 13 15 14 10 "
@@ -343,7 +381,7 @@ class TestLayout:
         assert rows[3:] == [" " * 15] * 3
 
     def test_a_single_row_board_shows_now(self):
-        assert layout(view(), 15, 1) == ["BEWOELKT     12"]
+        assert layout(view(), 15, 1) == ["BEWOELKT 12°C  "]
 
     def test_missing_rain_chance_leaves_wind_alone(self):
         assert layout(view(rain_chance=""), 22, 6)[2] == "WIND 14KMH".ljust(22)
@@ -362,11 +400,34 @@ class TestPlugin:
 
     def test_the_note_preview(self, make_plugin):
         rows = make_plugin().get_data(NOTE).formatted_lines
-        assert rows[0] == "BEWOELKT     12"
+        assert rows[0] == "BEWOELKT 12°C  "
+        assert rows[1] == f"{BLUE} 7°C  {RED} 14°C  "
+        assert rows[2] == f"M{RED}D{GREEN}M{YELLOW}D{RED}F{GREEN}S{YELLOW}S{GREEN} "
+
+    def test_the_week_starts_on_monday_by_default(self, make_plugin, calls):
+        data = make_plugin().get_data(NOTE).data
+        assert calls[-1]["past_days"] == 6
+        assert [day["name"] for day in data["days"]] == ["MO", "DI", "MI", "DO", "FR", "SA", "SO"]
+        # Today's range and rating are still Saturday's.
+        assert (data["low"], data["high"], data["color"]) == ("7", "14", YELLOW)
+
+    def test_the_degree_sign_can_be_left_off(self, make_plugin):
+        assert make_plugin(degree_sign="auto").get_data(NOTE).formatted_lines[0] == "BEWOELKT 12C   "
+        assert make_plugin(degree_sign="auto").get_data(FLAGSHIP).data["temp_unit"] == "°C"
+
+    def test_too_few_days_back_makes_the_plugin_unavailable(self, make_plugin, monkeypatch):
+        monkeypatch.setattr(wetter, "fetch_forecast_body", lambda params: {"daily": {"time": ["2026-10-24"]}})
+        result = make_plugin().fetch_data()
+        assert not result.available
+        assert "fewer days" in result.error
+
+    def test_the_week_can_start_today(self, make_plugin, calls):
+        rows = make_plugin(week_start="today").get_data(NOTE).formatted_lines
+        assert "past_days" not in calls[-1]
         assert rows[2] == f"S{YELLOW}S{GREEN}M{RED}D{YELLOW}M{GREEN}D{YELLOW}F{RED} "
 
     def test_the_week_can_start_tomorrow(self, make_plugin, calls):
-        result = make_plugin(include_today=False).get_data(NOTE)
+        result = make_plugin(week_start="tomorrow").get_data(NOTE)
         assert calls[-1]["forecast_days"] == 8
         assert result.formatted_lines[2].startswith(f"S{GREEN}M{RED}")
         assert [day["name"] for day in result.data["days"]] == ["SO", "MO", "DI", "MI", "DO", "FR", "SA"]
@@ -376,38 +437,37 @@ class TestPlugin:
     def test_english_names_the_days_and_weather_in_english(self, make_plugin):
         rows = make_plugin(language="en").get_data(FLAGSHIP).formatted_lines
         assert rows[0].startswith("CLOUDY")
-        assert rows[1].startswith("LOW 7°  HIGH 14°")
-        assert rows[3] == " SA SU MO TU WE TH FR "
+        assert rows[3] == " MO TU WE TH FR SA SU "
 
     def test_imperial_asks_for_imperial_and_converts_the_threshold(self, make_plugin, calls):
         # 0.4 in of Thursday showers is 10 mm — well over the 1 mm threshold.
-        result = make_plugin(units="imperial").get_data(FLAGSHIP)
+        result = make_plugin(units="imperial", week_start="today").get_data(FLAGSHIP)
         assert calls[-1]["temperature_unit"] == "fahrenheit"
         assert result.data["wind_unit"] == "MPH"
         assert result.data["temp_unit"] == "°F"
         assert result.data["days"][5]["rating"] == BAD
 
     def test_custom_colors_replace_the_defaults(self, make_plugin):
-        data = make_plugin(color_good="blue", color_bad="violet").get_data(NOTE).data
+        data = make_plugin(color_good="blue", color_bad="violet", week_start="today").get_data(NOTE).data
         assert data["week_tiles"] == "{65}{67}{68}{65}{67}{65}{68}"
 
     def test_an_unknown_color_falls_back_to_the_default(self, make_plugin):
-        data = make_plugin(color_good="pink").get_data(NOTE).data
+        data = make_plugin(color_good="pink", week_start="today").get_data(NOTE).data
         assert data["days"][1]["color"] == GREEN
 
     def test_a_higher_threshold_downgrades_more_days(self, make_plugin):
-        data = make_plugin(rain_threshold=6).get_data(NOTE).data
+        data = make_plugin(rain_threshold=6, week_start="today").get_data(NOTE).data
         assert [day["rating"] for day in data["days"]] == [MIXED, GOOD, MIXED, MIXED, GOOD, MIXED, BAD]
 
     def test_a_broken_threshold_uses_the_default(self, make_plugin):
-        data = make_plugin(rain_threshold="viel").get_data(NOTE).data
+        data = make_plugin(rain_threshold="viel", week_start="today").get_data(NOTE).data
         assert data["days"][2]["rating"] == BAD
 
     def test_strip_umlauts(self, make_plugin):
         assert make_plugin(umlauts="strip").get_data(NOTE).data["condition"] == "BEWOLKT"
 
     def test_variables(self, make_plugin):
-        data = make_plugin(location_name="Köln").get_data(FLAGSHIP).data
+        data = make_plugin(location_name="Köln", week_start="today").get_data(FLAGSHIP).data
         assert data["location"] == "KOELN"
         assert (data["temp"], data["feels_like"], data["humidity"], data["wind"]) == ("12", "10", "71", "14")
         assert (data["rain_chance"], data["rain"], data["color"]) == ("20", "0.0", YELLOW)

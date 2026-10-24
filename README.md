@@ -1,16 +1,18 @@
 # Wetter Plugin
 
-The weather for any coordinates on a Vestaboard Note: what it is doing outside right now, today's low and high, and the coming week as one colored tile per day.
+The weather for any coordinates on a Vestaboard Note: what it is doing outside right now, today's low and high, and this week as one colored tile per day.
 
 ```
-BEWOELKT     12
-MIN 7  MAX 14
-S🟨S🟩M🟥D🟨M🟩D🟨F🟥
+BEWOELKT 12°C
+🟦 7°C  🟥 14°C
+M🟥D🟩M🟨D🟥F🟩S🟨S🟩
 ```
 
 ## Overview
 
 Forecasts come from [Open-Meteo](https://open-meteo.com): free, no account, no API key, and addressed by latitude and longitude. Open-Meteo also works out the location's timezone, so "today" and the weekday names belong to the place you are showing, not to the machine FiestaBoard runs on.
+
+The week overview is the calendar week, Monday to Sunday. Days already behind you are filled in from Open-Meteo's record of what the weather actually was; the setting **Week overview** switches to the next seven days instead.
 
 Each day of the week overview is rated and gets a color tile:
 
@@ -25,27 +27,25 @@ The rain threshold (default 1 mm) is there because Open-Meteo reports the most s
 ### On a Note (15×3)
 
 ```
-BEWOELKT     12      ← now: condition and temperature
-MIN 7  MAX 14        ← today's low and high
-S🟨S🟩M🟥D🟨M🟩D🟨F🟥    ← the week: weekday initial + tile, today first
+BEWOELKT 12°C        ← now: condition and temperature
+🟦 7°C  🟥 14°C        ← today's low (blue) and high (red)
+M🟥D🟩M🟨D🟥F🟩S🟨S🟩    ← the week, Monday to Sunday
 ```
-
-Seven days in a row from today make the initials unambiguous: `S S M` on a Saturday can only be Saturday, Sunday, Monday.
 
 ### On a Flagship (22×6)
 
 ```
-BEWOELKT           12°
-MIN 7°  MAX 14°
+BEWOELKT 12°C
+🟦 7°C  🟥 14°C
 REGEN 20%   WIND 14KMH
- SA SO MO DI MI DO FR
- 🟨🟨 🟩🟩 🟥🟥 🟨🟨 🟩🟩 🟨🟨 🟥🟥
- 14 16 12 13 15 14 10
+ MO DI MI DO FR SA SO
+ 🟥🟥 🟩🟩 🟨🟨 🟥🟥 🟩🟩 🟨🟨 🟩🟩
+ 10 13 12 10 15 14 16
 ```
 
 The layout is picked from the board's size, not its type: anything at least 20×6 gets the Flagship layout, anything smaller the compact one. A board wider than 27 tiles writes the weekday names out in full on the compact layout (`SA🟨 SO🟩 …`).
 
-The degree sign is left off on a Note by default — tile 62 is a degree sign on a Flagship but a heart, or nothing, on a Note.
+Tile 62 is a degree sign on a Flagship; some Notes carry a heart or a blank flap there instead. If yours does, set **Degree sign** to Auto and the Note shows `12C`.
 
 ## Setup
 
@@ -61,10 +61,10 @@ The degree sign is left off on a Note by default — tile 62 is a degree sign on
 | Location name | — | Only for `{{wetter.location}}`. |
 | Language | Deutsch | Condition words and weekday names, `de` or `en`. |
 | Units | Metric | Imperial asks Open-Meteo for °F, mph and inches. |
-| Week starts today | on | Off shows the seven days after today. |
+| Week overview | Calendar week | Monday–Sunday, or the next seven days from today or from tomorrow. |
 | Rain threshold (mm) | 1.0 | Wet days with less precipitation than this are yellow, not red. |
 | Colors | green / yellow / red | One per rating. |
-| Degree sign | Auto | Auto skips it on note-shaped boards. |
+| Degree sign | Always | Auto skips it on note-shaped boards. |
 | Umlauts | Expand | `BEWOELKT` or `BEWOLKT`. |
 | Refresh interval | 900 s | Minimum 300 s. Open-Meteo updates current conditions every 15 minutes. |
 
@@ -77,7 +77,7 @@ The degree sign is left off on a Note by default — tile 62 is a degree sign on
 | `{{wetter.condition}}` | Current condition | `BEWOELKT` |
 | `{{wetter.temp}}` | Current temperature, whole degrees, no unit | `12` |
 | `{{wetter.feels_like}}` | Apparent temperature | `10` |
-| `{{wetter.temp_unit}}` | Unit suffix, board-aware | `°C` |
+| `{{wetter.temp_unit}}` | Unit suffix, `C` when the degree sign is off | `°C` |
 | `{{wetter.humidity}}` | Relative humidity in % | `71` |
 | `{{wetter.wind}}` / `{{wetter.wind_unit}}` | Wind speed and unit | `14` / `KMH` |
 | `{{wetter.color}}` | Today's color tile | `{65}` |
@@ -95,9 +95,9 @@ The degree sign is left off on a Note by default — tile 62 is a degree sign on
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `{{wetter.week}}` | Initial + tile per day, 14 tiles | `S{65}S{66}M{63}…` |
-| `{{wetter.week_tiles}}` | Just the seven tiles | `{65}{66}{63}…` |
-| `{{wetter.days.N.name}}` | Weekday, N = 0…6 | `SA` |
+| `{{wetter.week}}` | Initial + tile per day, 14 tiles | `M{63}D{66}M{65}…` |
+| `{{wetter.week_tiles}}` | Just the seven tiles | `{63}{66}{65}…` |
+| `{{wetter.days.N.name}}` | Weekday, N = 0…6 (0 is Monday in a calendar week) | `MO` |
 | `{{wetter.days.N.condition}}` | The day's weather | `REGEN` |
 | `{{wetter.days.N.high}}` / `.low` | High and low | `12` / `7` |
 | `{{wetter.days.N.rain}}` / `.rain_chance` | Precipitation total and chance | `5.2` / `90` |
@@ -114,7 +114,7 @@ The degree sign is left off on a Note by default — tile 62 is a degree sign on
 ### A page of your own
 
 ```
-{{wetter.condition}} {{wetter.temp}}
+{{wetter.condition}} {{wetter.temp}}{{wetter.temp_unit}}
 {{wetter.low}}/{{wetter.high}} {{wetter.rain_chance}}%
 {{wetter.week}}
 ```

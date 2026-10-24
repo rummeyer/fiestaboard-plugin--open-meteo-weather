@@ -18,12 +18,17 @@ MANIFEST = json.loads((pathlib.Path(__file__).resolve().parent.parent / "manifes
 # Berlin, the location the committed previews were rendered for.
 COORDINATES = "52.52, 13.405"
 
+# Where Saturday 2026-10-24, "today", sits in the full fixture series: after
+# six past days, the most the plugin ever asks for.
+TODAY = 6
+
 
 def forecast_body():
-    """Saturday 2026-10-24 onward: one day of every rating, and both edge cases.
+    """Sunday 2026-10-18 to Saturday 2026-10-31, today being Saturday the 24th.
 
-    Monday is real rain (bad), Thursday's showers come to 0.4 mm and stay under
-    the default threshold (mixed), Friday is a thunderstorm (bad).
+    The calendar week (Mon 19 – Sun 25) has two rainy days behind it. Ahead,
+    Monday the 26th is real rain (bad), Thursday's showers come to 0.4 mm and
+    stay under the default threshold (mixed), Friday is a thunderstorm (bad).
     """
     return {
         "latitude": 52.52,
@@ -40,6 +45,12 @@ def forecast_body():
         },
         "daily": {
             "time": [
+                "2026-10-18",
+                "2026-10-19",
+                "2026-10-20",
+                "2026-10-21",
+                "2026-10-22",
+                "2026-10-23",
                 "2026-10-24",
                 "2026-10-25",
                 "2026-10-26",
@@ -49,13 +60,22 @@ def forecast_body():
                 "2026-10-30",
                 "2026-10-31",
             ],
-            "weather_code": [2, 0, 61, 3, 1, 80, 95, 3],
-            "temperature_2m_max": [14.2, 16.0, 11.5, 12.8, 15.3, 13.9, 9.6, 10.0],
-            "temperature_2m_min": [6.8, 5.1, 7.4, 8.0, 6.2, 7.7, 4.9, 3.0],
-            "precipitation_sum": [0.0, 0.0, 5.2, 0.0, 0.0, 0.4, 8.1, 0.0],
-            "precipitation_probability_max": [20, 5, 90, 15, 10, 45, 80, 10],
+            "weather_code": [3, 61, 1, 3, 63, 0] + [2, 0, 61, 3, 1, 80, 95, 3],
+            "temperature_2m_max": [11.0, 10.2, 13.1, 12.0, 9.8, 15.4] + [14.2, 16.0, 11.5, 12.8, 15.3, 13.9, 9.6, 10.0],
+            "temperature_2m_min": [5.0, 6.1, 4.2, 6.6, 7.0, 5.5] + [6.8, 5.1, 7.4, 8.0, 6.2, 7.7, 4.9, 3.0],
+            "precipitation_sum": [0.0, 3.0, 0.0, 0.0, 6.0, 0.0] + [0.0, 0.0, 5.2, 0.0, 0.0, 0.4, 8.1, 0.0],
+            "precipitation_probability_max": [10, 70, 5, 20, 85, 0] + [20, 5, 90, 15, 10, 45, 80, 10],
         },
     }
+
+
+def answer(params):
+    """The slice of the fixture Open-Meteo would return for *params*."""
+    body = forecast_body()
+    start = TODAY - params.get("past_days", 0)
+    end = TODAY + params["forecast_days"]
+    body["daily"] = {key: values[start:end] for key, values in body["daily"].items()}
+    return body
 
 
 @pytest.fixture
@@ -70,10 +90,7 @@ def calls(monkeypatch):
 
     def fake_fetch(params):
         sent.append(params)
-        body = forecast_body()
-        days = params["forecast_days"]
-        body["daily"] = {key: values[:days] for key, values in body["daily"].items()}
-        return body
+        return answer(params)
 
     monkeypatch.setattr(wetter, "fetch_forecast_body", fake_fetch)
     return sent

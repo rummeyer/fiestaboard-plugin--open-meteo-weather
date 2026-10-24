@@ -1,7 +1,7 @@
 {
   "id": "wetter",
   "name": "Wetter",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Current weather and a colored week overview for any coordinates — condition, temperature, today's low and high, and one green, yellow or red tile per day. Built for the Note, adapts to the Flagship. Forecasts from Open-Meteo, no API key needed.",
   "author": "Oliver Rummeyer",
   "repository": "https://github.com/rummeyer/fiestaboard-plugin--wetter",
@@ -57,11 +57,21 @@
         ],
         "default": "metric"
       },
-      "include_today": {
-        "type": "boolean",
-        "title": "Week starts today",
-        "description": "Off starts the week overview tomorrow, so all seven tiles are days still ahead. Today's low and high are shown either way.",
-        "default": true
+      "week_start": {
+        "type": "string",
+        "title": "Week overview",
+        "description": "Monday shows the calendar week, Monday to Sunday — days already past are filled in from what the weather actually was. The other two show the next seven days. Today's low and high are shown either way.",
+        "enum": [
+          "monday",
+          "today",
+          "tomorrow"
+        ],
+        "enumNames": [
+          "Calendar week (Mon–Sun)",
+          "Next 7 days from today",
+          "Next 7 days from tomorrow"
+        ],
+        "default": "monday"
       },
       "rain_threshold": {
         "type": "number",
@@ -142,18 +152,18 @@
       "degree_sign": {
         "type": "string",
         "title": "Degree sign",
-        "description": "Board character 62 is a degree sign on a Flagship. A Note carries a different flap at that position — a heart on some, nothing at all on others — so Auto shows the sign only where it prints as one.",
+        "description": "Board character 62 is a degree sign on a Flagship. Some Notes carry a heart or a blank flap at that position instead; choose Auto to leave the sign off on note-shaped boards.",
         "enum": [
-          "auto",
           "on",
+          "auto",
           "off"
         ],
         "enumNames": [
+          "Always",
           "Auto (skip on Note)",
-          "Always (blank or a heart on a Note)",
           "Never"
         ],
-        "default": "auto"
+        "default": "on"
       },
       "umlauts": {
         "type": "string",
@@ -224,7 +234,7 @@
         "example": "10"
       },
       "temp_unit": {
-        "description": "Unit suffix for temperatures, board-aware",
+        "description": "Unit suffix for temperatures, °C or °F (C or F when the degree sign is off)",
         "type": "string",
         "max_length": 2,
         "group": "now",
@@ -287,67 +297,67 @@
         "example": "0.0"
       },
       "week_tiles": {
-        "description": "Seven color tiles, one per day, today (or tomorrow) first",
+        "description": "Seven color tiles, one per day of the week overview",
         "type": "string",
         "max_length": 28,
         "group": "week",
-        "example": "{65}{66}{63}{65}{66}{65}{63}"
+        "example": "{63}{66}{65}{63}{66}{65}{66}"
       },
       "week": {
         "description": "Weekday initial plus color tile for each day — 14 tiles, fits a Note row",
         "type": "string",
         "max_length": 35,
         "group": "week",
-        "example": "S{65}S{66}M{63}D{65}M{66}D{65}F{63}"
+        "example": "M{63}D{66}M{65}D{63}F{66}S{65}S{66}"
       },
       "block": {
         "description": "The whole laid-out board as one value, rows separated by newlines. Put this on the first template line to fill the board.",
         "type": "string",
         "max_length": 400,
         "group": "layout",
-        "example": "BEWOELKT     12\\nMIN 7  MAX 14  \\nS{65}S{66}M{63}D{65}M{66}D{65}F{63} "
+        "example": "BEWOELKT 12°C  \\n{67} 7°C  {63} 14°C  \\nM{63}D{66}M{65}D{63}F{66}S{65}S{66} "
       },
       "line1": {
         "description": "Board row 1 of the layout: condition and temperature",
         "type": "string",
         "max_length": 60,
         "group": "layout",
-        "example": "BEWOELKT     12"
+        "example": "BEWOELKT 12°C  "
       },
       "line2": {
-        "description": "Board row 2 of the layout: today's low and high",
+        "description": "Board row 2 of the layout: today's low after a blue tile, the high after a red one",
         "type": "string",
         "max_length": 60,
         "group": "layout",
-        "example": "MIN 7  MAX 14  "
+        "example": "{67} 7°C  {63} 14°C  "
       },
       "line3": {
         "description": "Board row 3: the week on a Note, rain and wind on a Flagship",
         "type": "string",
         "max_length": 100,
         "group": "layout",
-        "example": "S{65}S{66}M{63}D{65}M{66}D{65}F{63} "
+        "example": "M{63}D{66}M{65}D{63}F{66}S{65}S{66} "
       },
       "line4": {
         "description": "Board row 4: weekday names on a Flagship, empty on a Note",
         "type": "string",
         "max_length": 60,
         "group": "layout",
-        "example": " SA SO MO DI MI DO FR "
+        "example": " MO DI MI DO FR SA SO "
       },
       "line5": {
         "description": "Board row 5: the week as color bars on a Flagship, empty on a Note",
         "type": "string",
         "max_length": 100,
         "group": "layout",
-        "example": " {65}{65} {66}{66} {63}{63} {65}{65} {66}{66} {65}{65} {63}{63} "
+        "example": " {63}{63} {66}{66} {65}{65} {63}{63} {66}{66} {65}{65} {66}{66} "
       },
       "line6": {
         "description": "Board row 6: each day's high on a Flagship, empty on a Note",
         "type": "string",
         "max_length": 60,
         "group": "layout",
-        "example": " 14 16 12 13 15 14 10 "
+        "example": " 10 13 12 10 15 14 16 "
       }
     },
     "arrays": {
@@ -359,7 +369,7 @@
             "type": "string",
             "max_length": 2,
             "group": "week",
-            "example": "SA"
+            "example": "MO"
           },
           "date": {
             "description": "ISO date",
@@ -468,25 +478,25 @@
       }
     ]
   },
-  "teaser": "BEWOELKT     12",
+  "teaser": "BEWOELKT 12°C  ",
   "previews": [
     {
       "device_type": "note",
       "rows": [
-        "BEWOELKT     12",
-        "MIN 7  MAX 14  ",
-        "S{65}S{66}M{63}D{65}M{66}D{65}F{63} "
+        "BEWOELKT 12°C  ",
+        "{67} 7°C  {63} 14°C  ",
+        "M{63}D{66}M{65}D{63}F{66}S{65}S{66} "
       ]
     },
     {
       "device_type": "flagship",
       "rows": [
-        "BEWOELKT           12°",
-        "MIN 7°  MAX 14°       ",
+        "BEWOELKT 12°C         ",
+        "{67} 7°C  {63} 14°C         ",
         "REGEN 20%   WIND 14KMH",
-        " SA SO MO DI MI DO FR ",
-        " {65}{65} {66}{66} {63}{63} {65}{65} {66}{66} {65}{65} {63}{63} ",
-        " 14 16 12 13 15 14 10 "
+        " MO DI MI DO FR SA SO ",
+        " {63}{63} {66}{66} {65}{65} {63}{63} {66}{66} {65}{65} {66}{66} ",
+        " 10 13 12 10 15 14 16 "
       ]
     }
   ]

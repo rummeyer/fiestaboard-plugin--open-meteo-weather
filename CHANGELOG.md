@@ -9,6 +9,21 @@ the two drift apart.
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-10-24
+
+### Changed
+
+- The week overview is now the **calendar week, Monday to Sunday**. Days
+  already past come from Open-Meteo's record of the actual weather. The
+  setting **Week overview** replaces *Week starts today* and still offers the
+  next seven days from today or tomorrow.
+- The temperature follows the condition directly (`BEWOELKT 12°C`) instead of
+  sitting at the right edge, and carries its unit.
+- Today's low and high are marked with a **blue and a red tile** instead of
+  the words MIN and MAX.
+- The degree sign is shown on every board by default, the Note included.
+  *Auto* still leaves it off on note-shaped boards.
+
 ## [1.0.0] — 2026-10-24
 
 ### Added
