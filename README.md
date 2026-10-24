@@ -22,7 +22,7 @@ Each day of the week overview is rated and gets a color tile:
 | ⬜ white | mixed | cloudy, overcast or fog (WMO 2–3, 45, 48) — or a wet day with less precipitation than the **rain threshold** |
 | 🟥 red | bad | drizzle, rain, snow, showers or thunder (WMO 51 and up) |
 
-The rain threshold (default 1 mm) is there because Open-Meteo reports the most severe weather of the day: one drizzly hour at 6 a.m. makes a day "drizzle" with 0.1 mm to show for it. The three colors can be changed in the settings. The board has no grey tile, so cloudy days are white by default; yellow is one setting away.
+The rain threshold (default 1 mm) is there because Open-Meteo reports the most severe weather of the day: one drizzly hour at 6 a.m. makes a day "drizzle" with 0.1 mm to show for it. The three colors can be changed in the settings. The board has no grey tile, so cloudy days are white by default. White is a contrast tile, though: it is white on a black board and **black on a white board** — on a white Note, pick yellow or orange for cloudy days instead.
 
 ### On a Note (15×3)
 

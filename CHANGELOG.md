@@ -9,6 +9,11 @@ the two drift apart.
 
 ## [Unreleased]
 
+### Changed
+
+- The color settings say what *White* really does: tile 69 is white on a black
+  board and black on a white one. The board has no white tile for white boards.
+
 ## [1.2.0] — 2026-10-24
 
 ### Added

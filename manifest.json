@@ -99,7 +99,7 @@
           "Orange",
           "Red",
           "Violet",
-          "White"
+          "White (black on a white board)"
         ],
         "default": "green"
       },
@@ -116,7 +116,7 @@
           "violet"
         ],
         "enumNames": [
-          "White (the board has no grey)",
+          "White (black on a white board)",
           "Yellow",
           "Orange",
           "Green",
@@ -124,7 +124,8 @@
           "Red",
           "Violet"
         ],
-        "default": "white"
+        "default": "white",
+        "description": "The board has no grey tile. White is a contrast tile: white on a black board, black on a white one. On a white board, yellow or orange read as the softer choice."
       },
       "color_bad": {
         "type": "string",
@@ -145,7 +146,7 @@
           "Blue",
           "Yellow",
           "Green",
-          "White"
+          "White (black on a white board)"
         ],
         "default": "red"
       },
