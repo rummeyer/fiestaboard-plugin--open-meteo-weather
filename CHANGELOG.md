@@ -9,6 +9,24 @@ the two drift apart.
 
 ## [Unreleased]
 
+## [3.1.0] — 2026-10-24
+
+### Added
+
+- `docs/SETUP.md`, screenshots (`docs/board-display.png` and friends, listed
+  in the manifest) and a README in FiestaBoard's standard section order — what
+  the plugin registry asks for.
+- A note-array preview and a Flagship demo page next to the Note one, so
+  FiestaBoard offers the demo that fits the board you own.
+- FiestaBoard's geometry conformance suite runs in the tests, on every board
+  shape the platform supports.
+
+### Fixed
+
+- `line1`…`line6` and `block` declared lengths too short for wide boards: a
+  row is up to 128 tiles on the widest FiestaPanel grid, and `block` up to
+  12383. The template editor sizes its fit warnings from these numbers.
+
 ## [3.0.0] — 2026-10-24
 
 ### Changed

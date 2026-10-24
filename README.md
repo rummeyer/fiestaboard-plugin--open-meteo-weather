@@ -1,12 +1,10 @@
 # Open Meteo Weather Plugin
 
-The weather for any coordinates on a Vestaboard Note: what it is doing outside right now with temperature and humidity, today's low and high, and this week as one colored tile per day.
+The weather for any coordinates: what it is doing outside right now, today's low and high, and this week as one colored tile per day — built for the Note, adapts to the Flagship.
 
-```
-WOLKIG 12°C 71%
-🟦 7°C  🟥 14°C
-M🟥D🟩M⬜D🟥F🟩S⬜S🟩
-```
+![Open Meteo Weather Display](./docs/board-display.png)
+
+**→ [Setup Guide](./docs/SETUP.md)**
 
 ## Overview
 
@@ -45,30 +43,11 @@ REGEN 20%   WIND 14KMH
  10 13 12 10 15 14 16
 ```
 
+![Open Meteo Weather on a Flagship](./docs/board-flagship.png)
+
 The layout is picked from the board's size, not its type: anything at least 20×6 gets the Flagship layout, anything smaller the compact one. A board wider than 27 tiles writes the weekday names out in full on the compact layout (`MO🟥 DI🟩 …`).
 
 Tile 62 is a degree sign on a Flagship; some Notes carry a heart or a blank flap there instead. If yours does, set **Degree sign** to Blank space for `12 C`, or to Auto for `12C` on note-shaped boards.
-
-## Setup
-
-1. Install the plugin from its repository URL in FiestaBoard.
-2. Open **Integrations → Open Meteo Weather** and enter the **Coordinates**, e.g. `52.52, 13.405`. In Google Maps, right-click a spot and click the numbers at the top of the menu to copy them; OpenStreetMap shows them in the URL and under "Show address".
-3. Enable the plugin and put `{{open_meteo_weather.block}}` on the first line of a page, with the line set to left alignment and no wrap.
-
-## Settings
-
-| Setting | Default | |
-|---------|---------|---|
-| Coordinates | — | `latitude, longitude`. Comma, semicolon or space between them. |
-| Location name | — | Only for `{{open_meteo_weather.location}}`. |
-| Language | Deutsch | Condition words and weekday names, `de` or `en`. |
-| Units | Metric | Imperial asks Open-Meteo for °F, mph and inches. |
-| Week overview | Calendar week | Monday–Sunday, or the next seven days from today or from tomorrow. |
-| Rain threshold (mm) | 1.0 | Wet days with less precipitation than this are yellow, not red. |
-| Colors | green / contrast / red | One per rating: a color, Contrast or Background. |
-| Degree sign | Always | Always `12°C`, Auto skips it on note-shaped boards, Blank space `12 C`, Never `12C`. |
-| Umlauts | Expand | `BEWOELKT` or `BEWOLKT`. |
-| Refresh interval | 900 s | Minimum 300 s. Open-Meteo updates current conditions every 15 minutes. |
 
 ## Template Variables
 
@@ -114,13 +93,54 @@ Tile 62 is a degree sign on a Flagship; some Notes carry a heart or a blank flap
 | `{{open_meteo_weather.block}}` | The whole layout, rows separated by newlines — put it on the first template line |
 | `{{open_meteo_weather.line1}}` … `{{open_meteo_weather.line6}}` | The same rows one by one, full board width; empty past the board's height |
 
-### A page of your own
+## Example Templates
+
+### The built-in layout
+
+```
+{{open_meteo_weather.block}}
+```
+
+Put it on the first line of a page, with the line set to left alignment and no wrap. The rows are exactly as wide as the board, so they pass through the page's alignment untouched.
+
+### Your own layout
 
 ```
 {{open_meteo_weather.condition}} {{open_meteo_weather.temp}}{{open_meteo_weather.temp_unit}}
 {{open_meteo_weather.low}}/{{open_meteo_weather.high}} {{open_meteo_weather.rain_chance}}%
 {{open_meteo_weather.week}}
 ```
+
+## Configuration
+
+| Setting | Default | |
+|---------|---------|---|
+| Coordinates | — | `latitude, longitude`. Comma, semicolon or space between them. |
+| Location name | — | Only for `{{open_meteo_weather.location}}`. |
+| Language | Deutsch | Condition words and weekday names, `de` or `en`. |
+| Units | Metric | Imperial asks Open-Meteo for °F, mph and inches. |
+| Week overview | Calendar week | Monday–Sunday, or the next seven days from today or from tomorrow. |
+| Rain threshold (mm) | 1.0 | Wet days with less precipitation than this are yellow, not red. |
+| Colors | green / contrast / red | One per rating: a color, Contrast or Background. |
+| Degree sign | Always | Always `12°C`, Auto skips it on note-shaped boards, Blank space `12 C`, Never `12C`. |
+| Umlauts | Expand | `BEWOELKT` or `BEWOLKT`. |
+| Refresh interval | 900 s | Minimum 300 s. Open-Meteo updates current conditions every 15 minutes. |
+
+No API key, no account, no environment variables.
+
+## Features
+
+- Free forecasts from [Open-Meteo](https://open-meteo.com) — no account, no API key
+- The location's own timezone, so "today" and the weekday names belong to the place you show
+- The calendar week, with days already behind you filled in from what the weather actually was
+- One colored tile per day — good, mixed or bad — with a rain threshold so one drizzly hour does not paint the whole day red
+- German and English, with short condition words where the full ones would not fit a Note
+- Board-adaptive: a compact layout for the Note, a fuller one for the Flagship, verified by FiestaBoard's geometry conformance suite on every supported board shape
+- Degree sign, umlaut and color options for Notes and white boards
+
+## Author
+
+Oliver Rummeyer
 
 ## Development
 

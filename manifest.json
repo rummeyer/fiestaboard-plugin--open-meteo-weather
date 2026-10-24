@@ -1,7 +1,7 @@
 {
   "id": "open_meteo_weather",
   "name": "Open Meteo Weather",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Current weather and a colored week overview for any coordinates — condition, temperature, today's low and high, and one green, yellow or red tile per day. Built for the Note, adapts to the Flagship. Forecasts from Open-Meteo, no API key needed.",
   "author": "Oliver Rummeyer",
   "repository": "https://github.com/rummeyer/fiestaboard-plugin--open-meteo-weather",
@@ -326,51 +326,51 @@
         "example": "M{63}D{66}M{69}D{63}F{66}S{69}S{66}"
       },
       "block": {
-        "description": "The whole laid-out board as one value, rows separated by newlines. Put this on the first template line to fill the board.",
+        "description": "The whole laid-out board as one value, rows separated by newlines. Put this on the first template line to fill the board. Length is geometry-dependent -- 12383 is the worst case, the largest grid a FiestaPanel accepts (128x96) -- so it is far shorter on a Flagship or Note.",
         "type": "string",
-        "max_length": 400,
+        "max_length": 12383,
         "group": "layout",
         "example": "WOLKIG 12°C 71%\\n{67} 7°C  {63} 14°C  \\nM{63}D{66}M{69}D{63}F{66}S{69}S{66} "
       },
       "line1": {
-        "description": "Board row 1 of the layout: condition, temperature and humidity",
+        "description": "Board row 1 of the layout: condition, temperature and humidity. Width is geometry-dependent -- 128 is the worst case, the widest grid a FiestaPanel accepts.",
         "type": "string",
-        "max_length": 60,
+        "max_length": 128,
         "group": "layout",
         "example": "WOLKIG 12°C 71%"
       },
       "line2": {
-        "description": "Board row 2 of the layout: today's low after a blue tile, the high after a red one",
+        "description": "Board row 2 of the layout: today's low after a blue tile, the high after a red one. Width is geometry-dependent -- 128 is the worst case, the widest grid a FiestaPanel accepts.",
         "type": "string",
-        "max_length": 60,
+        "max_length": 128,
         "group": "layout",
         "example": "{67} 7°C  {63} 14°C  "
       },
       "line3": {
-        "description": "Board row 3: the week on a Note, rain and wind on a Flagship",
+        "description": "Board row 3: the week on a Note, rain and wind on a Flagship. Width is geometry-dependent -- 128 is the worst case, the widest grid a FiestaPanel accepts.",
         "type": "string",
-        "max_length": 100,
+        "max_length": 128,
         "group": "layout",
         "example": "M{63}D{66}M{69}D{63}F{66}S{69}S{66} "
       },
       "line4": {
-        "description": "Board row 4: weekday names on a Flagship, empty on a Note",
+        "description": "Board row 4: weekday names on a Flagship, empty on a Note. Width is geometry-dependent -- 128 is the worst case, the widest grid a FiestaPanel accepts.",
         "type": "string",
-        "max_length": 60,
+        "max_length": 128,
         "group": "layout",
         "example": " MO DI MI DO FR SA SO "
       },
       "line5": {
-        "description": "Board row 5: the week as color bars on a Flagship, empty on a Note",
+        "description": "Board row 5: the week as color bars on a Flagship, empty on a Note. Width is geometry-dependent -- 128 is the worst case, the widest grid a FiestaPanel accepts.",
         "type": "string",
-        "max_length": 100,
+        "max_length": 128,
         "group": "layout",
         "example": " {63}{63} {66}{66} {69}{69} {63}{63} {66}{66} {69}{69} {66}{66} "
       },
       "line6": {
-        "description": "Board row 6: each day's high on a Flagship, empty on a Note",
+        "description": "Board row 6: each day's high on a Flagship, empty on a Note. Width is geometry-dependent -- 128 is the worst case, the widest grid a FiestaPanel accepts.",
         "type": "string",
-        "max_length": 60,
+        "max_length": 128,
         "group": "layout",
         "example": " 10 13 12 10 15 14 16 "
       }
@@ -463,36 +463,74 @@
     "rain": 5,
     "week_tiles": 28,
     "week": 35,
-    "block": 400,
-    "line1": 60,
-    "line2": 60,
-    "line3": 100,
-    "line4": 60,
-    "line5": 100,
-    "line6": 60
+    "block": 12383,
+    "line1": 128,
+    "line2": 128,
+    "line3": 128,
+    "line4": 128,
+    "line5": 128,
+    "line6": 128
   },
   "demo": {
-    "name": "Open Meteo Weather Demo",
-    "device_type": "note",
-    "template": [
-      "{{open_meteo_weather.block}}",
-      "",
-      ""
-    ],
-    "line_metadata": [
-      {
-        "alignment": "left",
-        "wrap": false
-      },
-      {
-        "alignment": "left",
-        "wrap": false
-      },
-      {
-        "alignment": "left",
-        "wrap": false
-      }
-    ]
+    "flagship": {
+      "name": "Open Meteo Weather Demo",
+      "template": [
+        "{{open_meteo_weather.block}}",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "line_metadata": [
+        {
+          "alignment": "left",
+          "wrap": false
+        },
+        {
+          "alignment": "left",
+          "wrap": false
+        },
+        {
+          "alignment": "left",
+          "wrap": false
+        },
+        {
+          "alignment": "left",
+          "wrap": false
+        },
+        {
+          "alignment": "left",
+          "wrap": false
+        },
+        {
+          "alignment": "left",
+          "wrap": false
+        }
+      ]
+    },
+    "note": {
+      "name": "Open Meteo Weather Demo",
+      "template": [
+        "{{open_meteo_weather.block}}",
+        "",
+        ""
+      ],
+      "line_metadata": [
+        {
+          "alignment": "left",
+          "wrap": false
+        },
+        {
+          "alignment": "left",
+          "wrap": false
+        },
+        {
+          "alignment": "left",
+          "wrap": false
+        }
+      ]
+    }
   },
   "teaser": "WOLKIG 12°C 71%",
   "previews": [
@@ -514,6 +552,37 @@
         " {63}{63} {66}{66} {69}{69} {63}{63} {66}{66} {69}{69} {66}{66} ",
         " 10 13 12 10 15 14 16 "
       ]
+    },
+    {
+      "device_type": "note_array",
+      "notes_wide": 2,
+      "notes_tall": 2,
+      "rows": [
+        "BEWOELKT 12°C 71%             ",
+        "{67} 7°C  {63} 14°C                 ",
+        "REGEN 20%           WIND 14KMH",
+        "     MO DI MI DO FR SA SO     ",
+        "     {63}{63} {66}{66} {69}{69} {63}{63} {66}{66} {69}{69} {66}{66}     ",
+        "     10 13 12 10 15 14 16     "
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "docs/board-display.png",
+      "alt": "Open Meteo Weather on a Vestaboard Note: WOLKIG 12C 71%, today's low and high next to a blue and a red tile, and the week as seven colored tiles",
+      "caption": "On a Note, with Degree sign set to Auto",
+      "primary": true
+    },
+    {
+      "src": "docs/board-flagship.png",
+      "alt": "Open Meteo Weather on a Vestaboard Flagship: current condition, low and high, rain chance and wind, then the week with weekday names, color tiles and highs",
+      "caption": "The Flagship layout"
+    },
+    {
+      "src": "docs/board-array.png",
+      "alt": "Open Meteo Weather on a 2x2 note array, using the Flagship layout centered on 30 columns",
+      "caption": "On a 2x2 note array"
     }
   ]
 }
