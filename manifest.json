@@ -1,7 +1,7 @@
 {
   "id": "open_meteo_weather",
   "name": "Open Meteo Weather",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "Current weather and a colored week overview for any coordinates — condition, temperature, today's low and high, and one green, yellow or red tile per day. Built for the Note, adapts to the Flagship. Forecasts from Open-Meteo, no API key needed.",
   "author": "Oliver Rummeyer",
   "repository": "https://github.com/rummeyer/fiestaboard-plugin--open-meteo-weather",

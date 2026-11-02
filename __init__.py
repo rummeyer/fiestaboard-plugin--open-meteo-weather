@@ -16,6 +16,7 @@ import logging
 import math
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
@@ -33,6 +34,62 @@ HTTP_TIMEOUT = 10
 # second. Long enough to cover one render pass, short enough never to stand in
 # for the platform's own refresh interval.
 SHARED_CACHE_SECONDS = 120
+
+# When a fetch fails, the board goes on showing what the last good one read,
+# for up to STALE_SECONDS, rather than an empty variable — FiestaBoard prints
+# #REF for that. And the plugin waits before asking again, twice as long after
+# each failure up to RETRY_MAX_SECONDS: FiestaBoard caches only what worked,
+# so every render would otherwise ask a service that is down (2.11.2026: some
+# 600 requests an hour while Open-Meteo was overloaded).
+STALE_SECONDS = 3 * 3600
+RETRY_FIRST_SECONDS = 30
+RETRY_MAX_SECONDS = 600
+
+
+class Fallback:
+    """The last good result per board, and when to ask again after a failure."""
+
+    def __init__(self, clock: Callable[[], float] = time.monotonic):
+        self._clock = clock
+        self._lock = threading.Lock()
+        self._good: dict[str, tuple[float, PluginResult]] = {}
+        self._failures = 0
+        self._retry_at = 0.0
+        self.error = ""
+
+    def waiting(self) -> bool:
+        """Whether the last failure is too recent to ask again yet."""
+        with self._lock:
+            return self._clock() < self._retry_at
+
+    def succeeded(self, key: str, result: PluginResult) -> None:
+        with self._lock:
+            self._good[key] = (self._clock(), result)
+            self._failures = 0
+            self._retry_at = 0.0
+            self.error = ""
+
+    def failed(self, error: str) -> None:
+        with self._lock:
+            self._failures += 1
+            wait = min(RETRY_FIRST_SECONDS * 2 ** (self._failures - 1), RETRY_MAX_SECONDS)
+            self._retry_at = self._clock() + wait
+            self.error = error
+
+    def last(self, key: str) -> PluginResult | None:
+        """The last good result for this board, if it is recent enough to show."""
+        with self._lock:
+            good = self._good.get(key)
+            if good is None or self._clock() - good[0] > STALE_SECONDS:
+                return None
+            return good[1]
+
+    def clear(self) -> None:
+        with self._lock:
+            self._good.clear()
+            self._failures = 0
+            self._retry_at = 0.0
+            self.error = ""
 
 # Board geometry assumed outside a board-scoped render (unit tests, the
 # /plugins/{id}/data endpoint). Flagship is the larger shape, so a layout built
@@ -685,6 +742,10 @@ def layout(view: View, width: int, height: int) -> list[str]:
 class OpenMeteoWeatherPlugin(PluginBase):
     """Current weather and a colored week overview for one location."""
 
+    def __init__(self, manifest: dict[str, Any]):
+        super().__init__(manifest)
+        self._fallback = Fallback()
+
     @property
     def plugin_id(self) -> str:
         return "open_meteo_weather"
@@ -704,6 +765,7 @@ class OpenMeteoWeatherPlugin(PluginBase):
         """New coordinates or units are a new question; never answer from the old one."""
         clear_shared_cache()
         self.clear_cache()
+        self._fallback.clear()
 
     def _options(self) -> tuple[str, str, str]:
         """Language, units and week start, clamped to what the code handles."""
@@ -718,6 +780,10 @@ class OpenMeteoWeatherPlugin(PluginBase):
         if coordinates is None:
             return PluginResult(available=False, error="Coordinates are not configured")
 
+        key = self._cache_key(self.board)
+        if self._fallback.waiting():
+            return self._fallback.last(key) or PluginResult(available=False, error=self._fallback.error)
+
         language, units, week_start = self._options()
         today_index, _ = days_requested(week_start)
         try:
@@ -726,10 +792,10 @@ class OpenMeteoWeatherPlugin(PluginBase):
                 raise OpenMeteoWeatherError("Open-Meteo returned fewer days than were asked for")
         except OpenMeteoWeatherError as error:
             logger.warning("Open-Meteo fetch failed: %s", error)
-            return PluginResult(available=False, error=str(error))
+            return self._failed(key, str(error))
         except Exception as error:  # noqa: BLE001 — a bad payload must not break the render loop
             logger.exception("Unexpected error reading the Open-Meteo forecast")
-            return PluginResult(available=False, error=str(error))
+            return self._failed(key, str(error))
 
         view, data = self._build(forecast, language, units, week_start, today_index)
         board = self.board
@@ -747,7 +813,14 @@ class OpenMeteoWeatherPlugin(PluginBase):
         for index in range(FALLBACK_HEIGHT):
             data[f"line{index + 1}"] = lines[index] if index < len(lines) else ""
 
-        return PluginResult(available=True, data=data, formatted_lines=lines)
+        result = PluginResult(available=True, data=data, formatted_lines=lines)
+        self._fallback.succeeded(key, result)
+        return result
+
+    def _failed(self, key: str, error: str) -> PluginResult:
+        """After a failed fetch, the last good forecast while it is recent, else none."""
+        self._fallback.failed(error)
+        return self._fallback.last(key) or PluginResult(available=False, error=error)
 
     def _build(
         self, forecast: Forecast, language: str, units: str, week_start: str, today_index: int

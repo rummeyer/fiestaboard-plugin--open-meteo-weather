@@ -574,3 +574,81 @@ class TestValidation:
     @pytest.mark.parametrize("threshold", [-1, "viel"])
     def test_a_bad_threshold_is_rejected(self, threshold):
         assert OpenMeteoWeatherPlugin(MANIFEST).validate_config({"rain_threshold": threshold})
+
+
+class TestWhileOpenMeteoFails:
+    """The last good forecast stays on the board, and a failing service is not asked at every render."""
+
+    @pytest.fixture
+    def clock(self):
+        return [1000.0]
+
+    @pytest.fixture
+    def plugin(self, make_plugin, clock):
+        plugin = make_plugin()
+        plugin._fallback = open_meteo_weather.Fallback(clock=lambda: clock[0])
+        return plugin
+
+    @staticmethod
+    def _failing(monkeypatch, asked):
+        def fail(params):
+            asked.append(params)
+            raise OpenMeteoWeatherError("Open-Meteo refused the request: The service is overloaded")
+
+        monkeypatch.setattr(open_meteo_weather, "fetch_forecast_body", fail)
+
+    def test_the_last_good_forecast_is_shown_after_a_failure(self, plugin, monkeypatch):
+        good = plugin.fetch_data()
+        self._failing(monkeypatch, [])
+        result = plugin.fetch_data()
+        assert result.available
+        assert result.data["block"] == good.data["block"]
+
+    def test_without_a_good_forecast_it_is_unavailable_as_before(self, plugin, monkeypatch):
+        self._failing(monkeypatch, [])
+        result = plugin.fetch_data()
+        assert not result.available
+        assert "overloaded" in result.error
+
+    def test_after_a_failure_it_waits_longer_each_time_before_asking_again(self, plugin, monkeypatch, clock):
+        asked = []
+        self._failing(monkeypatch, asked)
+        plugin.fetch_data()
+        for _ in range(5):
+            plugin.fetch_data()
+        assert len(asked) == 1, "renders right after a failure do not ask again"
+        waits = []
+        for _ in range(8):
+            before = len(asked)
+            step = 0
+            while len(asked) == before:
+                clock[0] += 1
+                step += 1
+                plugin.fetch_data()
+            waits.append(step)
+        assert waits[:5] == [30, 60, 120, 240, 480]
+        assert set(waits[5:]) == {open_meteo_weather.RETRY_MAX_SECONDS}
+
+    def test_a_forecast_too_old_is_no_longer_shown(self, plugin, monkeypatch, clock):
+        plugin.fetch_data()
+        self._failing(monkeypatch, [])
+        clock[0] += open_meteo_weather.STALE_SECONDS + 1
+        assert not plugin.fetch_data().available
+
+    def test_success_ends_the_waiting(self, plugin, monkeypatch, clock, calls):
+        asked = []
+        self._failing(monkeypatch, asked)
+        plugin.fetch_data()
+        clock[0] += 30
+        monkeypatch.undo()
+        monkeypatch.setattr(open_meteo_weather, "fetch_forecast_body", lambda params: forecast_body())
+        assert plugin.fetch_data().available
+        self._failing(monkeypatch, asked)
+        plugin.fetch_data()
+        assert len(asked) == 2, "the first failure after a success is asked at once"
+
+    def test_a_config_change_forgets_the_last_forecast(self, plugin, monkeypatch):
+        plugin.fetch_data()
+        plugin.on_config_change({}, {"coordinates": "48.14, 11.58"})
+        self._failing(monkeypatch, [])
+        assert not plugin.fetch_data().available
